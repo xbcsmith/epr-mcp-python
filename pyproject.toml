@@ -1,0 +1,150 @@
+[build-system]
+requires = ["setuptools>=40.8.0", "wheel"]
+build-backend = "setuptools.build_meta:__legacy__"
+
+[project]
+name = "epr-mcp"
+version = "0.1.0"
+description = "A Python MCP Server for Event Provenance Registry (EPR)"
+readme = "README.md"
+requires-python = ">= 3.12"
+license.file = "LICENSE"
+authors = [
+  { name = "Brett Smith", email = "xbcsmith@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "mcp",
+    "httpx"
+]
+
+
+[project.optional-dependencies]
+lint = [
+    "ruff",
+]
+
+test = [
+    "coverage",
+    "pytest",
+    "mock",
+]
+
+build = [
+    "setuptools",
+    "wheel",
+    "build",
+    "twine",
+]
+
+[project.scripts]
+eprmcp = "epr_mcp.main:main"
+
+[project.urls]
+"Homepage" = "https://github.com/xbcsmith/epr-mcp-python"
+
+[tool.distutils.bdist_wheel]
+universal = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I", "RUF"]
+ignore = ["E402", "E501", "E731"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["epr_mcp"]
+force-wrap-aliases = true
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.tox]
+legacy_tox_ini = """
+
+[tox]
+envlist = clean, check, py{12}, report
+
+[testenv]
+setenv =
+    PYTHONPATH={toxinidir}/tests/
+    PYTHONUNBUFFERED=yes
+passenv = *
+usedevelop = false
+deps =
+    coverage
+    pytest
+    mock
+extras = testing
+commands =
+    coverage run -p -m pytest -vv {posargs:tests/}
+
+
+[testenv:clean]
+deps =
+    coverage
+    pytest
+    mock
+skip_install = true
+envdir = {toxworkdir}/coverage
+allowlist_externals = find
+                      rm
+commands =
+    rm -rf build/ dist/
+    coverage erase
+
+[testenv:check]
+deps =
+    ruff
+skip_install = true
+commands =
+    ruff check src/epr_mcp/ tests/
+
+[testenv:report]
+deps = coverage
+skip_install = true
+envdir = {toxworkdir}/coverage
+commands =
+    coverage combine
+    coverage report
+
+[testenv:build]
+deps =
+    wheel
+    build
+    twine
+skip_install = true
+commands =
+    python -m build --sdist bdist_wheel
+    twine check dist/*.*
+
+[testenv:release]
+deps =
+    {[testenv:build]deps}
+    twine
+skip_install = true
+commands =
+    {[testenv:build]commands}
+    twine upload --skip-existing dist/*.*
+
+[testenv:format]
+deps =
+    ruff
+skip_install = true
+commands =
+    ruff check --fix src/epr_mcp/ tests/
+
+"""
