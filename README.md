@@ -7,11 +7,11 @@ EPR MCP Python is a python MCP server for the Event Provenance Registry server.
 ## Development
 
 ```bash
-python3 -m venv ~/.virtualenvs/epr-mcp-python
-source ~/.virtualenvs/epr-mcp-python/bin/activate
-
 git clone git@github.com:xbcsmith/epr-mcp-python.git
 cd epr-mcp-python
+
+python3 -m venv .venv/epr-mcp-python
+source .venv/epr-mcp-python/bin/activate
 
 pip install -e .
 ```
@@ -37,4 +37,28 @@ clean           Cleanup everything
 
 ```text
 
+```
+
+### VSCode
+
+```json
+"mcp": {
+    "servers": {
+        "erp_mcp_docker": {
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--rm",
+                "--network=host",
+                "-e",
+                "EPR_URL",
+                "epr-mcp-python:latest"
+            ],
+            "env": {
+                "EPR_URL": "http://localhost:8042"
+            }
+        }
+    }
+}
 ```

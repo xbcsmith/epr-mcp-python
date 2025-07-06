@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: © 2025Brett Smith <xbcsmith@gmail.com>
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
 from importlib import metadata

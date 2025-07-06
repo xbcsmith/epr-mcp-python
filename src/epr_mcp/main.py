@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
+import asyncio
 import argparse
 import logging
 import os
@@ -51,12 +52,14 @@ class CmdLine(object):
             "--token",
             dest="epr_api_token",
             action="store",
+            default=os.environ.get("EPR_API_TOKEN"),
             help="EPR Access Token",
         )
         parser.add_argument(
             "--url",
             dest="epr_url",
             action="store",
+            default=os.environ.get("EPR_URL", "http://localhost:8042"),
             help="EPR Server URL",
         )
         parser.add_argument(
@@ -68,10 +71,6 @@ class CmdLine(object):
         )
 
         args = vars(parser.parse_args(sys.argv[2:]))
-        if not args["epr_url"]:
-            logger.error("EPR URL is required")
-            parser.print_help()
-            sys.exit(1)
         url = args["epr_url"]
         token = args["epr_api_token"]
         cfg = config.Config(url=url, token=token)

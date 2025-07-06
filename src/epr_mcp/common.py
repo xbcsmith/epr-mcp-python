@@ -8,7 +8,8 @@ import json
 import logging
 import os
 import sys
-
+from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
 
 from .errors import debug_except_hook
 
@@ -20,27 +21,62 @@ if debug:
     sys.excepthook = debug_except_hook
     logger.setLevel(logging.DEBUG)
 
+@dataclass
+class Model:
+    """Base class for data objects. Provides as_dict"""
 
-def hash_file(path):
-    BLOCKSIZE = 65536
-    hasher = hashlib.sha256()
-    with open(path, "rb") as fh:
-        buf = fh.read(BLOCKSIZE)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = fh.read(BLOCKSIZE)
-    result = "sha256:" + hasher.hexdigest()
-    return result
+    def as_dict(self):
+        """Get a dictionary contain object properties"""
+        return asdict(self)
 
+    def as_dict_query(self):
+        """Get a dictionary contain object properties"""
+        return {k: v for k, v in self.as_dict().items() if v}
 
-def hash_string(data):
-    hasher = hashlib.sha256()
-    hasher.update(data.encode("utf-8"))
-    return hasher.hexdigest()
+@dataclass
+class GraphQLQuery(Model):
+    query: str
+    variables: Dict[str, Any] = field(default_factory=dict)
 
+def get_operation(name: str, operation: str) -> str:
+        operation_map = {
+                "search": {
+                    "events": "FindEventInput!",
+                    "event_receivers": "FindEventReceiverInput!",
+                    "event_receiver_groups": "FindEventReceiverGroupInput!",
+                },
+                "mutation": {
+                    "create_event": "CreateEventInput!",
+                    "create_event_receiver": "CreateEventReceiverInput!",
+                    "create_event_receiver_group": "CreateEventReceiverGroupInput!",
+                },
+                "operation": {
+                    "events": "event",
+                    "event_receivers": "event_receiver",
+                    "event_receiver_groups": "event_receiver_group",
+                },
+                "create": {
+                    "create_event": "event",
+                    "create_event_receiver": "event_receiver",
+                    "create_event_receiver_group": "event_receiver_group",
+                },
+            }
+        return operation_map[name][operation]
 
-class EnhancedJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if dataclasses.is_dataclass(o):
-            return dataclasses.asdict(o)
-        return super().default(o)
+def get_search_query(operation: str, params: Optional[dict] = None, fields: Optional[list] = None
+    ) -> GraphQLQuery:
+    """Convert a query dictionary to a GraphQL query string."""
+    variables = dict(obj=params)
+    method = get_operation("search", operation)
+    op = get_operation("operation", operation)
+    _fields = ",".join(fields) if fields is not None else "id"
+    query = f"""query ($obj: {method}){{{operation}({op}: $obj) {{ {_fields} }}}}"""
+    return GraphQLQuery(query=query, variables=variables)
+
+def get_mutation_query(operation: str, params: Optional[dict] = None) -> GraphQLQuery:
+    """Convert a mutation dictionary to a GraphQL mutation string."""
+    variables = dict(obj=params)
+    method = get_operation("mutation", operation)
+    op = get_operation("create", operation)
+    query = f"""mutation ($obj: {method}){{{operation}({op}: $obj)}}"""
+    return GraphQLQuery(query=query, variables=variables)
