@@ -2,14 +2,11 @@
 # SPDX-FileCopyrightText: © 2025Brett Smith <xbcsmith@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
-import dataclasses
-import hashlib
-import json
 import logging
 import os
 import sys
-from typing import Any, Dict, List, Optional
 from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List, Optional
 
 from .errors import debug_except_hook
 
@@ -20,6 +17,7 @@ debug = os.environ.get("EPR_DEBUG")
 if debug:
     sys.excepthook = debug_except_hook
     logger.setLevel(logging.DEBUG)
+
 
 @dataclass
 class Model:
@@ -33,38 +31,40 @@ class Model:
         """Get a dictionary contain object properties"""
         return {k: v for k, v in self.as_dict().items() if v}
 
+
 @dataclass
 class GraphQLQuery(Model):
     query: str
     variables: Dict[str, Any] = field(default_factory=dict)
 
-def get_operation(name: str, operation: str) -> str:
-        operation_map = {
-                "search": {
-                    "events": "FindEventInput!",
-                    "event_receivers": "FindEventReceiverInput!",
-                    "event_receiver_groups": "FindEventReceiverGroupInput!",
-                },
-                "mutation": {
-                    "create_event": "CreateEventInput!",
-                    "create_event_receiver": "CreateEventReceiverInput!",
-                    "create_event_receiver_group": "CreateEventReceiverGroupInput!",
-                },
-                "operation": {
-                    "events": "event",
-                    "event_receivers": "event_receiver",
-                    "event_receiver_groups": "event_receiver_group",
-                },
-                "create": {
-                    "create_event": "event",
-                    "create_event_receiver": "event_receiver",
-                    "create_event_receiver_group": "event_receiver_group",
-                },
-            }
-        return operation_map[name][operation]
 
-def get_search_query(operation: str, params: Optional[dict] = None, fields: Optional[list] = None
-    ) -> GraphQLQuery:
+def get_operation(name: str, operation: str) -> str:
+    operation_map = {
+        "search": {
+            "events": "FindEventInput!",
+            "event_receivers": "FindEventReceiverInput!",
+            "event_receiver_groups": "FindEventReceiverGroupInput!",
+        },
+        "mutation": {
+            "create_event": "CreateEventInput!",
+            "create_event_receiver": "CreateEventReceiverInput!",
+            "create_event_receiver_group": "CreateEventReceiverGroupInput!",
+        },
+        "operation": {
+            "events": "event",
+            "event_receivers": "event_receiver",
+            "event_receiver_groups": "event_receiver_group",
+        },
+        "create": {
+            "create_event": "event",
+            "create_event_receiver": "event_receiver",
+            "create_event_receiver_group": "event_receiver_group",
+        },
+    }
+    return operation_map[name][operation]
+
+
+def get_search_query(operation: str, params: Optional[dict] = None, fields: Optional[list] = None) -> GraphQLQuery:
     """Convert a query dictionary to a GraphQL query string."""
     variables = dict(obj=params)
     method = get_operation("search", operation)
@@ -72,6 +72,7 @@ def get_search_query(operation: str, params: Optional[dict] = None, fields: Opti
     _fields = ",".join(fields) if fields is not None else "id"
     query = f"""query ($obj: {method}){{{operation}({op}: $obj) {{ {_fields} }}}}"""
     return GraphQLQuery(query=query, variables=variables)
+
 
 def get_mutation_query(operation: str, params: Optional[dict] = None) -> GraphQLQuery:
     """Convert a mutation dictionary to a GraphQL mutation string."""

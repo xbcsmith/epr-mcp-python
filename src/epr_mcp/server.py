@@ -5,13 +5,12 @@
 import logging
 import os
 import sys
-import json
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-from .errors import debug_except_hook
 from .common import get_search_query
+from .errors import debug_except_hook
 
 logger = logging.getLogger(__name__)
 
@@ -22,24 +21,23 @@ def run(cfg):
         sys.excepthook = debug_except_hook
         logger.setLevel(logging.DEBUG)
 
-
     mcp = FastMCP("epr-mcp")
 
-    @mcp.tool(title="Fetch Event", description="Fetch events from EPR")
+    @mcp.tool(title="Fetch Event", description="Fetch an event from EPR")
     async def fetch_event(epr_url: str, id: str) -> str:
         """Fetch an event from the EPR"""
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{epr_url}/api/v1/events/{id}")
             return response.text
 
-    @mcp.tool(title="Fetch Event Receiver", description="Fetch events from EPR")
+    @mcp.tool(title="Fetch Event Receiver", description="Fetch an event receiver from EPR")
     async def fetch_receiver(epr_url: str, id: str) -> str:
         """Fetch an event receiver from the EPR"""
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{epr_url}/api/v1/receivers/{id}")
             return response.text
 
-    @mcp.tool(title="Fetch Event Receiver", description="Fetch events from EPR")
+    @mcp.tool(title="Fetch Event Receiver Group", description="Fetch an event receiver group from EPR")
     async def fetch_group(epr_url: str, id: str) -> str:
         """Fetch an event receiver group from the EPR"""
         async with httpx.AsyncClient() as client:
@@ -49,7 +47,17 @@ def run(cfg):
     @mcp.tool(title="Search Events", description="Search for events in EPR")
     async def search_events(epr_url: str, data: dict) -> str:
         """Search for events in the EPR"""
-        fields=["id", "name", "version", "release", "platform_id", "package", "description", "success", "event_receiver_id"]
+        fields = [
+            "id",
+            "name",
+            "version",
+            "release",
+            "platform_id",
+            "package",
+            "description",
+            "success",
+            "event_receiver_id",
+        ]
         query = get_search_query(operation="events", params=data, fields=fields)
         async with httpx.AsyncClient() as client:
             headers = {"Content-Type": "application/json"}
@@ -58,11 +66,11 @@ def run(cfg):
                 return response.text
             else:
                 return f"Failed to search events: {response.text}"
-            
+
     @mcp.tool(title="Search Event Receivers", description="Search for event receivers in EPR")
     async def search_receivers(epr_url: str, data: dict) -> str:
         """Search for event receivers in the EPR"""
-        fields=["id", "name", "type", "version", "description"]
+        fields = ["id", "name", "type", "version", "description"]
         query = get_search_query(operation="event_receivers", params=data, fields=fields)
         async with httpx.AsyncClient() as client:
             headers = {"Content-Type": "application/json"}
@@ -75,7 +83,7 @@ def run(cfg):
     @mcp.tool(title="Search Event Receiver Groups", description="Search for event receiver groups in EPR")
     async def search_groups(epr_url: str, data: dict) -> str:
         """Search for event receiver groups in the EPR"""
-        fields=["id", "name", "type", "version", "description"]
+        fields = ["id", "name", "type", "version", "description"]
         query = get_search_query(operation="event_receiver_groups", params=data, fields=fields)
         async with httpx.AsyncClient() as client:
             headers = {"Content-Type": "application/json"}
