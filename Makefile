@@ -3,7 +3,7 @@ Q = $(if $(filter 1,$V),,@)
 M = $(shell printf "\033[34;1mepr-mcp-python ▶\033[0m")
 
 .PHONY: install
-install: ;$(info $(M) installing mcp...) @ ## Installs epr into a virtualenv called epr-mcp-python
+install: ;$(info $(M) installing mcp...) @ ## Installs epr-mcp-python into a virtualenv called epr-mcp
 	$Q python3 -m venv $(DESTDIR).virtualenvs/epr-mcp-python && \
 	$Q $(DESTDIR).virtualenvs/epr-mcp-python/bin/python3 -m pip install \
 				-e .
