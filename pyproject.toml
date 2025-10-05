@@ -24,9 +24,10 @@ classifiers = [
 ]
 dependencies = [
     "fastmcp",
-    "httpx"
-    "pydantic"
-    "starlette"
+    "httpx",
+    "pydantic",
+    "starlette",
+    "PyYAML",
 ]
 
 
