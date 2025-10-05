@@ -25,7 +25,7 @@ pip install -e .[lint,test,build]
 ## Makefile
 
 ```text
-install         Installs epr into a virtualenv called epr-mcp-python
+install         Installs epr-mcp-python into a virtualenv called epr-mcp
 lint            Run linter (requires ruff)
 tests           Run tests
 release         Run tox
@@ -43,22 +43,41 @@ clean           Cleanup everything
 
 ```json
 "mcp": {
-    "servers": {
-        "erp_mcp_docker": {
-            "command": "docker",
-            "args": [
-                "run",
-                "-i",
-                "--rm",
-                "--network=host",
-                "-e",
-                "EPR_URL",
-                "epr-mcp-python:latest"
-            ],
-            "env": {
-                "EPR_URL": "http://localhost:8042"
-            }
-        }
-    }
+	"servers": {
+		"epr-mcp-server": {
+			"command": "docker",
+			"args": [
+				"run",
+				"-i",
+				"--rm",
+				"--network=host",
+				"-e",
+				"EPR_URL",
+				"-e",
+				"EPR_TOKEN",
+				"epr-mcp-python:latest"
+			],
+			"env": {
+				"EPR_URL": "${input:epr_url}",
+				"EPR_TOKEN": "${input:epr_token}"
+			},
+			"type": "stdio"
+		}
+	},
+	"inputs": [
+		{
+			"type": "promptString",
+			"id": "epr_token",
+			"description": "EPR API Token",
+			"password": true
+		},
+		{
+			"type": "promptString",
+			"id": "epr_url",
+			"description": "EPR URL",
+			"default": "http://localhost:8042",
+			"password": false
+		}
+	]
 }
 ```

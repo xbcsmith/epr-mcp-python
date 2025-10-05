@@ -5,10 +5,10 @@
 import logging
 import os
 import sys
-from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from .errors import debug_except_hook
+from .models import GraphQLQuery
 
 logger = logging.getLogger(__name__)
 
@@ -17,25 +17,6 @@ debug = os.environ.get("EPR_DEBUG")
 if debug:
     sys.excepthook = debug_except_hook
     logger.setLevel(logging.DEBUG)
-
-
-@dataclass
-class Model:
-    """Base class for data objects. Provides as_dict"""
-
-    def as_dict(self):
-        """Get a dictionary contain object properties"""
-        return asdict(self)
-
-    def as_dict_query(self):
-        """Get a dictionary contain object properties"""
-        return {k: v for k, v in self.as_dict().items() if v}
-
-
-@dataclass
-class GraphQLQuery(Model):
-    query: str
-    variables: Dict[str, Any] = field(default_factory=dict)
 
 
 def get_operation(name: str, operation: str) -> str:
