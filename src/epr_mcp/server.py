@@ -2,11 +2,19 @@
 # SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
+import asyncio
 import logging
 import os
 import sys
+from pathlib import Path
 
 import json
+import yaml
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
 import httpx
 from fastmcp import FastMCP
@@ -253,11 +261,88 @@ def run(cfg):
     async def health_check(request: Request) -> PlainTextResponse:
         return PlainTextResponse("OK")
 
+    @mcp.custom_route("/openapi.yaml", methods=["GET"])
+    async def openapi_spec_yaml(request: Request):
+        """Serve the OpenAPI specification as YAML"""
+        from starlette.responses import FileResponse
+        openapi_path = Path(__file__).parent / "openapi.yaml"
+        if openapi_path.exists():
+            return FileResponse(openapi_path, media_type="text/yaml")
+        else:
+            from starlette.responses import JSONResponse
+            return JSONResponse({"error": "OpenAPI specification not found"}, status_code=404)
+    
+    @mcp.custom_route("/openapi.json", methods=["GET"])
+    async def openapi_spec_json(request: Request):
+        """Serve the OpenAPI specification as JSON"""
+        from starlette.responses import JSONResponse
+        openapi_path = Path(__file__).parent / "openapi.yaml"
+        if openapi_path.exists():
+            if yaml is not None:
+                with open(openapi_path, 'r') as f:
+                    spec = yaml.safe_load(f)
+                return JSONResponse(spec)
+            else:
+                return JSONResponse({"error": "YAML library not available"}, status_code=500)
+        else:
+            return JSONResponse({"error": "OpenAPI specification not found"}, status_code=404)
+    
+    @mcp.custom_route("/docs", methods=["GET"])
+    async def swagger_ui(request: Request):
+        """Serve Swagger UI for API documentation"""
+        from starlette.responses import HTMLResponse
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>EPR API Documentation</title>
+            <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.25.0/swagger-ui.css" />
+            <style>
+                html {{
+                    box-sizing: border-box;
+                    overflow: -moz-scrollbars-vertical;
+                    overflow-y: scroll;
+                }}
+                *, *:before, *:after {{
+                    box-sizing: inherit;
+                }}
+                body {{
+                    margin:0;
+                    background: #fafafa;
+                }}
+            </style>
+        </head>
+        <body>
+            <div id="swagger-ui"></div>
+            <script src="https://unpkg.com/swagger-ui-dist@3.25.0/swagger-ui-bundle.js"></script>
+            <script src="https://unpkg.com/swagger-ui-dist@3.25.0/swagger-ui-standalone-preset.js"></script>
+            <script>
+                window.onload = function() {{
+                    const ui = SwaggerUIBundle({{
+                        url: '{request.url.scheme}://{request.url.netloc}/openapi.json',
+                        dom_id: '#swagger-ui',
+                        deepLinking: true,
+                        presets: [
+                            SwaggerUIBundle.presets.apis,
+                            SwaggerUIStandalonePreset
+                        ],
+                        plugins: [
+                            SwaggerUIBundle.plugins.DownloadUrl
+                        ],
+                        layout: "StandaloneLayout"
+                    }})
+                }}
+            </script>
+        </body>
+        </html>
+        """
+        return HTMLResponse(html)
+
     """Run the MCP"""
     logger.info("MCP is running with the following configuration:")
     logger.info(f"Debug mode: {debug}")
     logger.info(f"MCP Server is running on http://localhost:8000/mcp")
     logger.info(f"EPR URL: {cfg.url}")
     logger.info(f"EPR Token: {cfg.token}")
-    mcp.run_async(transport="http", host="127.0.0.1", port=8000)
+    asyncio.run(mcp.run_async(transport="http", host="127.0.0.1", port=8000))
     return "MCP is running"

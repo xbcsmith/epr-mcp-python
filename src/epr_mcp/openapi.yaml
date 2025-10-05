@@ -1,0 +1,433 @@
+openapi: 3.0.3
+info:
+  title: EPR (Event Processing Registry) API
+  version: 1.0.0
+  description: API for managing events, event receivers, and event receiver groups in EPR
+  contact:
+    name: Brett Smith
+    email: xbcsmith@gmail.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+components:
+  schemas:
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the event
+        name:
+          type: string
+          description: Name of the event
+        version:
+          type: string
+          description: Version of the event
+        release:
+          type: string
+          description: Release version
+        platform_id:
+          type: string
+          description: Platform identifier
+        package:
+          type: string
+          description: Package name
+        description:
+          type: string
+          description: Event description
+        payload:
+          type: object
+          additionalProperties: true
+          description: Event payload data
+        success:
+          type: boolean
+          description: Success status
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        event_receiver_id:
+          type: string
+          description: Event receiver ID
+        event_receiver:
+          type: object
+          additionalProperties: true
+          description: Event receiver data
+      required:
+        - name
+        - version
+        - release
+        - platform_id
+        - package
+        - description
+        - event_receiver_id
+        - success
+        - payload
+
+    EventReceiver:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the event receiver
+        name:
+          type: string
+          description: Name of the event receiver
+        type:
+          type: string
+          description: Type of the event receiver
+        version:
+          type: string
+          description: Version of the event receiver
+        description:
+          type: string
+          description: Event receiver description
+        schema:
+          type: object
+          additionalProperties: true
+          description: Schema definition
+        fingerprint:
+          type: string
+          description: Fingerprint hash
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+      required:
+        - name
+        - type
+        - version
+        - description
+
+    EventReceiverGroup:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the event receiver group
+        name:
+          type: string
+          description: Name of the event receiver group
+        type:
+          type: string
+          description: Type of the event receiver group
+        version:
+          type: string
+          description: Version of the event receiver group
+        description:
+          type: string
+          description: Event receiver group description
+        enabled:
+          type: boolean
+          description: Whether the group is enabled
+        event_receiver_ids:
+          type: array
+          items:
+            type: string
+          description: List of event receiver IDs
+        fingerprint:
+          type: string
+          description: Fingerprint hash
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+      required:
+        - name
+        - type
+        - version
+        - description
+        - event_receiver_ids
+
+    SearchCriteria:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name filter
+        version:
+          type: string
+          description: Version filter
+        type:
+          type: string
+          description: Type filter
+        description:
+          type: string
+          description: Description filter
+        platform_id:
+          type: string
+          description: Platform ID filter (events only)
+        package:
+          type: string
+          description: Package filter (events only)
+        success:
+          type: boolean
+          description: Success status filter (events only)
+        event_receiver_id:
+          type: string
+          description: Event receiver ID filter (events only)
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Detailed error information
+
+paths:
+  /api/v1/events/{id}:
+    get:
+      operationId: fetchEvent
+      summary: Fetch an event by ID
+      description: Retrieve a single event by its unique identifier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Event ID
+      responses:
+        '200':
+          description: Event found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/events:
+    post:
+      operationId: createEvent
+      summary: Create a new event
+      description: Create a new event in the EPR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  event:
+                    $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/events/search:
+    post:
+      operationId: searchEvents
+      summary: Search for events
+      description: Search for events using various criteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchCriteria'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+
+  /api/v1/receivers/{id}:
+    get:
+      operationId: fetchReceiver
+      summary: Fetch an event receiver by ID
+      description: Retrieve a single event receiver by its unique identifier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Event receiver ID
+      responses:
+        '200':
+          description: Event receiver found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventReceiver'
+        '404':
+          description: Event receiver not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/receivers:
+    post:
+      operationId: createReceiver
+      summary: Create a new event receiver
+      description: Create a new event receiver in the EPR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventReceiver'
+      responses:
+        '201':
+          description: Event receiver created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  receiver:
+                    $ref: '#/components/schemas/EventReceiver'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/receivers/search:
+    post:
+      operationId: searchReceivers
+      summary: Search for event receivers
+      description: Search for event receivers using various criteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchCriteria'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventReceiver'
+
+  /api/v1/groups/{id}:
+    get:
+      operationId: fetchGroup
+      summary: Fetch an event receiver group by ID
+      description: Retrieve a single event receiver group by its unique identifier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Event receiver group ID
+      responses:
+        '200':
+          description: Event receiver group found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventReceiverGroup'
+        '404':
+          description: Event receiver group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/groups:
+    post:
+      operationId: createGroup
+      summary: Create a new event receiver group
+      description: Create a new event receiver group in the EPR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventReceiverGroup'
+      responses:
+        '201':
+          description: Event receiver group created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  group:
+                    $ref: '#/components/schemas/EventReceiverGroup'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/groups/search:
+    post:
+      operationId: searchGroups
+      summary: Search for event receiver groups
+      description: Search for event receiver groups using various criteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchCriteria'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventReceiverGroup'
+
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check endpoint
+      description: Check if the service is running
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: OK
