@@ -25,7 +25,15 @@ from pydantic import ValidationError
 from .common import get_search_query, get_mutation_query
 from .errors import debug_except_hook
 from .models import Event, EventReceiver, EventReceiverGroup
-from .schemas import validate_input
+from .schemas import (
+    validate_input, 
+    validate_event_response, 
+    validate_event_receiver_response, 
+    validate_event_receiver_group_response,
+    validate_event_list_response,
+    validate_event_receiver_list_response,
+    validate_event_receiver_group_list_response
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +57,29 @@ def run(cfg):
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{epr_url}/api/v1/events/{event_id}")
                 if response.status_code == 200:
-                    event_data = response.json()
-                    event = Event(**event_data)
-                    return json.dumps(event.as_dict(), indent=2)
+                    response_data = response.json()
+                    # Handle case where API wraps data in a 'data' field
+                    event_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
+                    
+                    # Handle case where data is an array (EPR API returns array even for single item)
+                    if isinstance(event_data, list):
+                        if len(event_data) == 0:
+                            return json.dumps({"error": "No event found with the specified ID"}, indent=2)
+                        # Take the first event from the array for single event fetch
+                        event_data = event_data[0]
+                    
+                    # Validate response data with Pydantic schema
+                    validated_event_data = validate_event_response(event_data)
+                    return json.dumps(validated_event_data, indent=2)
                 else:
                     return f"Failed to fetch event: {response.status_code} - {response.text}"
-        except (ValidationError, ValueError) as e:
+        except ValidationError as e:
+            # Handle both input validation and response validation errors
+            if "response validation failed" in str(e):
+                return f"Response validation error: {str(e)}"
+            else:
+                return f"Input validation error: {str(e)}"
+        except ValueError as e:
             return f"Input validation error: {str(e)}"
         except Exception as e:
             return f"Error fetching event: {str(e)}"
@@ -70,12 +95,29 @@ def run(cfg):
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{epr_url}/api/v1/receivers/{receiver_id}")
                 if response.status_code == 200:
-                    receiver_data = response.json()
-                    receiver = EventReceiver(**receiver_data)
-                    return json.dumps(receiver.as_dict(), indent=2)
+                    response_data = response.json()
+                    # Handle case where API wraps data in a 'data' field
+                    receiver_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
+                    
+                    # Handle case where data is an array (EPR API returns array even for single item)
+                    if isinstance(receiver_data, list):
+                        if len(receiver_data) == 0:
+                            return json.dumps({"error": "No event receiver found with the specified ID"}, indent=2)
+                        # Take the first receiver from the array for single receiver fetch
+                        receiver_data = receiver_data[0]
+                    
+                    # Validate response data with Pydantic schema
+                    validated_receiver_data = validate_event_receiver_response(receiver_data)
+                    return json.dumps(validated_receiver_data, indent=2)
                 else:
                     return f"Failed to fetch event receiver: {response.status_code} - {response.text}"
-        except (ValidationError, ValueError) as e:
+        except ValidationError as e:
+            # Handle both input validation and response validation errors
+            if "response validation failed" in str(e):
+                return f"Response validation error: {str(e)}"
+            else:
+                return f"Input validation error: {str(e)}"
+        except ValueError as e:
             return f"Input validation error: {str(e)}"
         except Exception as e:
             return f"Error fetching event receiver: {str(e)}"
@@ -91,12 +133,29 @@ def run(cfg):
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{epr_url}/api/v1/groups/{group_id}")
                 if response.status_code == 200:
-                    group_data = response.json()
-                    group = EventReceiverGroup(**group_data)
-                    return json.dumps(group.as_dict(), indent=2)
+                    response_data = response.json()
+                    # Handle case where API wraps data in a 'data' field
+                    group_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
+                    
+                    # Handle case where data is an array (EPR API returns array even for single item)
+                    if isinstance(group_data, list):
+                        if len(group_data) == 0:
+                            return json.dumps({"error": "No event receiver group found with the specified ID"}, indent=2)
+                        # Take the first group from the array for single group fetch
+                        group_data = group_data[0]
+                    
+                    # Validate response data with Pydantic schema
+                    validated_group_data = validate_event_receiver_group_response(group_data)
+                    return json.dumps(validated_group_data, indent=2)
                 else:
                     return f"Failed to fetch event receiver group: {response.status_code} - {response.text}"
-        except (ValidationError, ValueError) as e:
+        except ValidationError as e:
+            # Handle both input validation and response validation errors
+            if "response validation failed" in str(e):
+                return f"Response validation error: {str(e)}"
+            else:
+                return f"Input validation error: {str(e)}"
+        except ValueError as e:
             return f"Input validation error: {str(e)}"
         except Exception as e:
             return f"Error fetching event receiver group: {str(e)}"
@@ -128,11 +187,19 @@ def run(cfg):
                 response = await client.post(f"{epr_url}/api/v1/graphql/query", json=query.as_dict_query(), headers=headers)
                 if response.status_code == 200:
                     result = response.json()
-                    events = [Event(**event_data) for event_data in result.get('data', {}).get('events', [])]
-                    return json.dumps([event.as_dict() for event in events], indent=2)
+                    events_data = result.get('data', {}).get('events', [])
+                    # Validate response data with Pydantic schema
+                    validated_events = validate_event_list_response(events_data)
+                    return json.dumps(validated_events, indent=2)
                 else:
                     return f"Failed to search events: {response.status_code} - {response.text}"
-        except (ValidationError, ValueError) as e:
+        except ValidationError as e:
+            # Handle both input validation and response validation errors
+            if "response validation failed" in str(e):
+                return f"Response validation error: {str(e)}"
+            else:
+                return f"Input validation error: {str(e)}"
+        except ValueError as e:
             return f"Input validation error: {str(e)}"
         except Exception as e:
             return f"Error searching events: {str(e)}"
@@ -152,11 +219,19 @@ def run(cfg):
                 response = await client.post(f"{epr_url}/api/v1/graphql/query", json=query.as_dict_query(), headers=headers)
                 if response.status_code == 200:
                     result = response.json()
-                    receivers = [EventReceiver(**receiver_data) for receiver_data in result.get('data', {}).get('event_receivers', [])]
-                    return json.dumps([receiver.as_dict() for receiver in receivers], indent=2)
+                    receivers_data = result.get('data', {}).get('event_receivers', [])
+                    # Validate response data with Pydantic schema
+                    validated_receivers = validate_event_receiver_list_response(receivers_data)
+                    return json.dumps(validated_receivers, indent=2)
                 else:
                     return f"Failed to search event receivers: {response.status_code} - {response.text}"
-        except (ValidationError, ValueError) as e:
+        except ValidationError as e:
+            # Handle both input validation and response validation errors
+            if "response validation failed" in str(e):
+                return f"Response validation error: {str(e)}"
+            else:
+                return f"Input validation error: {str(e)}"
+        except ValueError as e:
             return f"Input validation error: {str(e)}"
         except Exception as e:
             return f"Error searching event receivers: {str(e)}"
@@ -176,11 +251,19 @@ def run(cfg):
                 response = await client.post(f"{epr_url}/api/v1/graphql/query", json=query.as_dict_query(), headers=headers)
                 if response.status_code == 200:
                     result = response.json()
-                    groups = [EventReceiverGroup(**group_data) for group_data in result.get('data', {}).get('event_receiver_groups', [])]
-                    return json.dumps([group.as_dict() for group in groups], indent=2)
+                    groups_data = result.get('data', {}).get('event_receiver_groups', [])
+                    # Validate response data with Pydantic schema
+                    validated_groups = validate_event_receiver_group_list_response(groups_data)
+                    return json.dumps(validated_groups, indent=2)
                 else:
                     return f"Failed to search event receiver groups: {response.status_code} - {response.text}"
-        except (ValidationError, ValueError) as e:
+        except ValidationError as e:
+            # Handle both input validation and response validation errors
+            if "response validation failed" in str(e):
+                return f"Response validation error: {str(e)}"
+            else:
+                return f"Input validation error: {str(e)}"
+        except ValueError as e:
             return f"Input validation error: {str(e)}"
         except Exception as e:
             return f"Error searching event receiver groups: {str(e)}"
@@ -199,12 +282,29 @@ def run(cfg):
             async with httpx.AsyncClient() as client:
                 response = await client.post(f"{epr_url}/api/v1/events", json=event.as_dict_query())
                 if response.status_code == 201:
-                    created_event_data = response.json()
-                    created_event = Event(**created_event_data)
-                    return json.dumps({"message": "Event created successfully", "event": created_event.as_dict()}, indent=2)
+                    response_data = response.json()
+                    # Handle case where API wraps data in a 'data' field
+                    created_event_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
+                    
+                    # Handle case where data is an array (EPR API returns array even for single item)
+                    if isinstance(created_event_data, list):
+                        if len(created_event_data) == 0:
+                            return json.dumps({"error": "Event creation returned empty result"}, indent=2)
+                        # Take the first event from the array
+                        created_event_data = created_event_data[0]
+                    
+                    # Validate response data with Pydantic schema
+                    validated_event_data = validate_event_response(created_event_data)
+                    return json.dumps({"message": "Event created successfully", "event": validated_event_data}, indent=2)
                 else:
                     return f"Failed to create event: {response.status_code} - {response.text}"
-        except (ValidationError, ValueError) as e:
+        except ValidationError as e:
+            # Handle both input validation and response validation errors
+            if "response validation failed" in str(e):
+                return f"Response validation error: {str(e)}"
+            else:
+                return f"Input validation error: {str(e)}"
+        except ValueError as e:
             return f"Input validation error: {str(e)}"
         except Exception as e:
             return f"Error creating event: {str(e)}"
@@ -223,12 +323,29 @@ def run(cfg):
             async with httpx.AsyncClient() as client:
                 response = await client.post(f"{epr_url}/api/v1/receivers", json=receiver.as_dict_query())
                 if response.status_code == 201:
-                    created_receiver_data = response.json()
-                    created_receiver = EventReceiver(**created_receiver_data)
-                    return json.dumps({"message": "Event receiver created successfully", "receiver": created_receiver.as_dict()}, indent=2)
+                    response_data = response.json()
+                    # Handle case where API wraps data in a 'data' field
+                    created_receiver_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
+                    
+                    # Handle case where data is an array (EPR API returns array even for single item)
+                    if isinstance(created_receiver_data, list):
+                        if len(created_receiver_data) == 0:
+                            return json.dumps({"error": "Event receiver creation returned empty result"}, indent=2)
+                        # Take the first receiver from the array
+                        created_receiver_data = created_receiver_data[0]
+                    
+                    # Validate response data with Pydantic schema
+                    validated_receiver_data = validate_event_receiver_response(created_receiver_data)
+                    return json.dumps({"message": "Event receiver created successfully", "receiver": validated_receiver_data}, indent=2)
                 else:
                     return f"Failed to create event receiver: {response.status_code} - {response.text}"
-        except (ValidationError, ValueError) as e:
+        except ValidationError as e:
+            # Handle both input validation and response validation errors
+            if "response validation failed" in str(e):
+                return f"Response validation error: {str(e)}"
+            else:
+                return f"Input validation error: {str(e)}"
+        except ValueError as e:
             return f"Input validation error: {str(e)}"
         except Exception as e:
             return f"Error creating event receiver: {str(e)}"
@@ -247,12 +364,29 @@ def run(cfg):
             async with httpx.AsyncClient() as client:
                 response = await client.post(f"{epr_url}/api/v1/groups", json=group.as_dict_query())
                 if response.status_code == 201:
-                    created_group_data = response.json()
-                    created_group = EventReceiverGroup(**created_group_data)
-                    return json.dumps({"message": "Event receiver group created successfully", "group": created_group.as_dict()}, indent=2)
+                    response_data = response.json()
+                    # Handle case where API wraps data in a 'data' field
+                    created_group_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
+                    
+                    # Handle case where data is an array (EPR API returns array even for single item)
+                    if isinstance(created_group_data, list):
+                        if len(created_group_data) == 0:
+                            return json.dumps({"error": "Event receiver group creation returned empty result"}, indent=2)
+                        # Take the first group from the array
+                        created_group_data = created_group_data[0]
+                    
+                    # Validate response data with Pydantic schema
+                    validated_group_data = validate_event_receiver_group_response(created_group_data)
+                    return json.dumps({"message": "Event receiver group created successfully", "group": validated_group_data}, indent=2)
                 else:
                     return f"Failed to create event receiver group: {response.status_code} - {response.text}"
-        except (ValidationError, ValueError) as e:
+        except ValidationError as e:
+            # Handle both input validation and response validation errors
+            if "response validation failed" in str(e):
+                return f"Response validation error: {str(e)}"
+            else:
+                return f"Input validation error: {str(e)}"
+        except ValueError as e:
             return f"Input validation error: {str(e)}"
         except Exception as e:
             return f"Error creating event receiver group: {str(e)}"

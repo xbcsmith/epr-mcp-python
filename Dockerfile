@@ -18,7 +18,7 @@ COPY . /src/epr_mcp
 RUN pip install --no-cache-dir /src/epr_mcp/dist/epr_mcp-0.1.0-py2.py3-none-any.whl
 
 # Add health check for HTTP server
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=90s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Start the MCP server in HTTP mode
