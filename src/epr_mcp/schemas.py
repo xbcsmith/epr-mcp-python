@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from typing import Any, Dict, List, Optional, Union
+from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, ValidationError
 
 
@@ -114,6 +115,82 @@ class FetchInput(BaseModel):
         return v.strip()
 
 
+# Response validation models
+class EventResponse(BaseModel):
+    """Schema for validating event response data"""
+    model_config = {"populate_by_name": True}
+    
+    id: str = Field(..., description="Event ID")
+    name: str = Field(..., description="Event name")
+    version: str = Field(..., description="Event version")
+    release: str = Field(..., description="Release version")
+    platform_id: str = Field(..., description="Platform identifier")
+    package: str = Field(..., description="Package name")
+    description: str = Field(..., description="Event description")
+    payload: Dict[str, Any] = Field(default_factory=dict, description="Event payload")
+    success: bool = Field(..., description="Success status")
+    created_at: Optional[str] = Field(None, description="Creation timestamp")
+    event_receiver_id: str = Field(..., description="Event receiver ID")
+    event_receiver: Dict[str, Any] = Field(
+        default_factory=dict, 
+        description="Event receiver data",
+        alias="EventReceiver"
+    )
+
+    @field_validator('payload', 'event_receiver')
+    @classmethod
+    def validate_dict_fields(cls, v):
+        if v is None:
+            return {}
+        if not isinstance(v, dict):
+            raise ValidationError('Field must be a dictionary')
+        return v
+
+
+class EventReceiverResponse(BaseModel):
+    """Schema for validating event receiver response data"""
+    id: str = Field(..., description="Event receiver ID")
+    name: str = Field(..., description="Event receiver name")
+    type: str = Field(..., description="Event receiver type")
+    version: str = Field(..., description="Event receiver version")
+    description: str = Field(..., description="Event receiver description")
+    schema_data: Dict[str, Any] = Field(default_factory=dict, description="Event receiver schema", alias="schema")
+    fingerprint: Optional[str] = Field(None, description="Event receiver fingerprint")
+    created_at: Optional[str] = Field(None, description="Creation timestamp")
+
+    @field_validator('schema_data')
+    @classmethod
+    def validate_schema_field(cls, v):
+        if v is None:
+            return {}
+        if not isinstance(v, dict):
+            raise ValidationError('Schema must be a dictionary')
+        return v
+
+
+class EventReceiverGroupResponse(BaseModel):
+    """Schema for validating event receiver group response data"""
+    id: str = Field(..., description="Event receiver group ID")
+    name: str = Field(..., description="Event receiver group name")
+    type: str = Field(..., description="Event receiver group type")
+    version: str = Field(..., description="Event receiver group version")
+    description: str = Field(..., description="Event receiver group description")
+    enabled: bool = Field(default=True, description="Group enabled status")
+    event_receiver_ids: List[str] = Field(default_factory=list, description="List of event receiver IDs")
+    fingerprint: Optional[str] = Field(None, description="Event receiver group fingerprint")
+    created_at: Optional[str] = Field(None, description="Creation timestamp")
+    updated_at: Optional[str] = Field(None, description="Last update timestamp")
+
+    @field_validator('event_receiver_ids')
+    @classmethod
+    def validate_event_receiver_ids(cls, v):
+        if v is None:
+            return []
+        if not isinstance(v, list):
+            raise ValidationError('Event receiver IDs must be a list')
+        return v
+
+
 # Schema mapping for different operations
 SCHEMA_MAP = {
     # Search operations
@@ -181,3 +258,120 @@ def get_validation_schema(operation: str) -> BaseModel:
         raise ValidationError(f"Unsupported operation: {operation}")
     
     return SCHEMA_MAP[operation]
+
+
+def validate_event_response(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate event response data from EPR API.
+    
+    Args:
+        data: Raw response data from API
+        
+    Returns:
+        Validated event data as dictionary
+        
+    Raises:
+        ValidationError: If data doesn't match expected schema
+    """
+    try:
+        validated = EventResponse(**data)
+        return validated.model_dump(by_alias=True)
+    except ValidationError as e:
+        raise ValidationError(f"Event response validation failed: {str(e)}")
+
+
+def validate_event_receiver_response(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate event receiver response data from EPR API.
+    
+    Args:
+        data: Raw response data from API
+        
+    Returns:
+        Validated event receiver data as dictionary
+        
+    Raises:
+        ValidationError: If data doesn't match expected schema
+    """
+    try:
+        validated = EventReceiverResponse(**data)
+        return validated.model_dump(by_alias=True)
+    except ValidationError as e:
+        raise ValidationError(f"Event receiver response validation failed: {str(e)}")
+
+
+def validate_event_receiver_group_response(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate event receiver group response data from EPR API.
+    
+    Args:
+        data: Raw response data from API
+        
+    Returns:
+        Validated event receiver group data as dictionary
+        
+    Raises:
+        ValidationError: If data doesn't match expected schema
+    """
+    try:
+        validated = EventReceiverGroupResponse(**data)
+        return validated.model_dump(by_alias=True)
+    except ValidationError as e:
+        raise ValidationError(f"Event receiver group response validation failed: {str(e)}")
+
+
+def validate_event_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Validate list of events response data from EPR API.
+    
+    Args:
+        data: Raw list of event data from API
+        
+    Returns:
+        Validated list of event data
+        
+    Raises:
+        ValidationError: If any event doesn't match expected schema
+    """
+    try:
+        return [validate_event_response(event) for event in data]
+    except ValidationError as e:
+        raise ValidationError(f"Event list response validation failed: {str(e)}")
+
+
+def validate_event_receiver_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Validate list of event receivers response data from EPR API.
+    
+    Args:
+        data: Raw list of event receiver data from API
+        
+    Returns:
+        Validated list of event receiver data
+        
+    Raises:
+        ValidationError: If any receiver doesn't match expected schema
+    """
+    try:
+        return [validate_event_receiver_response(receiver) for receiver in data]
+    except ValidationError as e:
+        raise ValidationError(f"Event receiver list response validation failed: {str(e)}")
+
+
+def validate_event_receiver_group_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Validate list of event receiver groups response data from EPR API.
+    
+    Args:
+        data: Raw list of event receiver group data from API
+        
+    Returns:
+        Validated list of event receiver group data
+        
+    Raises:
+        ValidationError: If any group doesn't match expected schema
+    """
+    try:
+        return [validate_event_receiver_group_response(group) for group in data]
+    except ValidationError as e:
+        raise ValidationError(f"Event receiver group list response validation failed: {str(e)}")
