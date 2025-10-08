@@ -16,9 +16,9 @@ The EPR MCP Server is a Python-based Model Context Protocol (MCP) server that pr
 
 | Name | Description |
 |------|-------------|
-| [DOCKER_COMPOSE.md](./DOCKER_COMPOSE.md) | Complete Docker Compose setup guide including service profiles (production, monitoring), configuration management, deployment strategies, and troubleshooting for containerized environments |
-| [OPENAPI_IMPLEMENTATION.md](./OPENAPI_IMPLEMENTATION.md) | Comprehensive guide to the OpenAPI 3.0 implementation, including endpoint definitions, schema documentation, Swagger UI integration, and examples of API usage |
-| [SCHEMA_VALIDATION.md](./SCHEMA_VALIDATION.md) | Detailed documentation of Pydantic validation schemas for all MCP tools, including search criteria, creation inputs, and validation rules with examples |
+| [docker_compose.md](./docker_compose.md) | Complete Docker Compose setup guide including service profiles (production, monitoring), configuration management, deployment strategies, and troubleshooting for containerized environments |
+| [openapi_implementation.md](./openapi_implementation.md) | Comprehensive guide to the OpenAPI 3.0 implementation, including endpoint definitions, schema documentation, Swagger UI integration, and examples of API usage |
+| [schema_validation.md](./schema_validation.md) | Detailed documentation of Pydantic validation schemas for all MCP tools, including search criteria, creation inputs, and validation rules with examples |
 
 ## Quick Start
 
@@ -27,6 +27,8 @@ The EPR MCP Server is a Python-based Model Context Protocol (MCP) server that pr
 ```bash
 git clone https://github.com/xbcsmith/epr-mcp-python.git
 cd epr-mcp-python
+python3 -m venv .venv/epr-mcp-python
+source .venv/epr-mcp-python/bin/activate  
 pip install -e .
 ```
 
@@ -42,7 +44,7 @@ export EPR_TOKEN="your-api-token"
 ### 3. Start the Server
 
 ```bash
-python -m epr_mcp.main
+python -m epr_mcp.main start
 ```
 
 ### 4. Access Documentation
