@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
+import re
 from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, ValidationError
@@ -9,30 +10,58 @@ from pydantic import BaseModel, Field, field_validator, ValidationError
 
 class EventSearchInput(BaseModel):
     """Schema for event search input"""
-    name: Optional[str] = Field(None, description="Name of the event")
-    version: Optional[str] = Field(None, description="Version of the event")
-    release: Optional[str] = Field(None, description="Release version")
-    platform_id: Optional[str] = Field(None, description="Platform identifier")
-    package: Optional[str] = Field(None, description="Package name")
-    description: Optional[str] = Field(None, description="Event description")
+    name: Optional[str] = Field(
+        None, 
+        pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
+        description="Name of the event"
+    )
+    version: Optional[str] = Field(
+        None, 
+        pattern=r"([0-9]+)(\\.[0-9]+)?(\\.[0-9]+)?(-([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?(\\+([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?",
+        description="Version of the event"
+    )
+    release: Optional[str] = Field(None, pattern=r"^\S+$", description="Release version")
+    platform_id: Optional[str] = Field(
+        None, 
+        pattern=r"^([0-9a-zA-Z]+)(-[0-9a-zA-Z]+)+$",
+        description="Platform identifier"
+    )
+    package: Optional[str] = Field(None, pattern=r"^([A-Za-z]+)$", description="Package name")
+    description: Optional[str] = Field(None, pattern=r"^(.|\s)*$", description="Event description")
     success: Optional[bool] = Field(None, description="Success status")
-    event_receiver_id: Optional[str] = Field(None, description="Event receiver ID")
+    event_receiver_id: Optional[str] = Field(None, pattern=r"^([0-9A-Za-z]{26})$", description="Event receiver ID")
 
 
 class EventReceiverSearchInput(BaseModel):
     """Schema for event receiver search input"""
-    name: Optional[str] = Field(None, description="Name of the event receiver")
-    type: Optional[str] = Field(None, description="Type of the event receiver")
-    version: Optional[str] = Field(None, description="Version of the event receiver")
-    description: Optional[str] = Field(None, description="Event receiver description")
+    name: Optional[str] = Field(
+        None, 
+        pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
+        description="Name of the event receiver"
+    )
+    type: Optional[str] = Field(None, pattern=r"^[^ ]+$", description="Type of the event receiver")
+    version: Optional[str] = Field(
+        None, 
+        pattern=r"([0-9]+)(\\.[0-9]+)?(\\.[0-9]+)?(-([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?(\\+([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?",
+        description="Version of the event receiver"
+    )
+    description: Optional[str] = Field(None, pattern=r"^(.|\s)*$", description="Event receiver description")
 
 
 class EventReceiverGroupSearchInput(BaseModel):
     """Schema for event receiver group search input"""
-    name: Optional[str] = Field(None, description="Name of the event receiver group")
-    type: Optional[str] = Field(None, description="Type of the event receiver group")
-    version: Optional[str] = Field(None, description="Version of the event receiver group")
-    description: Optional[str] = Field(None, description="Event receiver group description")
+    name: Optional[str] = Field(
+        None, 
+        pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
+        description="Name of the event receiver group"
+    )
+    type: Optional[str] = Field(None, pattern=r"^[^ ]+$", description="Type of the event receiver group")
+    version: Optional[str] = Field(
+        None, 
+        pattern=r"([0-9]+)(\\.[0-9]+)?(\\.[0-9]+)?(-([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?(\\+([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?",
+        description="Version of the event receiver group"
+    )
+    description: Optional[str] = Field(None, pattern=r"^(.|\s)*$", description="Event receiver group description")
 
 
 class SearchDataWrapper(BaseModel):
@@ -44,13 +73,28 @@ class SearchDataWrapper(BaseModel):
 
 class EventCreateInput(BaseModel):
     """Schema for event creation input"""
-    name: str = Field(..., description="Name of the event", min_length=1)
-    version: str = Field(..., description="Version of the event", min_length=1)
-    release: str = Field(..., description="Release version", min_length=1)
-    platform_id: str = Field(..., description="Platform identifier", min_length=1)
-    package: str = Field(..., description="Package name", min_length=1)
-    description: str = Field(..., description="Event description", min_length=1)
-    event_receiver_id: str = Field(..., description="Event receiver ID", min_length=1)
+    name: str = Field(
+        ..., 
+        pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
+        description="Name of the event", 
+        min_length=1
+    )
+    version: str = Field(
+        ..., 
+        pattern=r"([0-9]+)(\\.[0-9]+)?(\\.[0-9]+)?(-([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?(\\+([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?",
+        description="Version of the event", 
+        min_length=1
+    )
+    release: str = Field(..., pattern=r"^\S+$", description="Release version", min_length=1)
+    platform_id: str = Field(
+        ..., 
+        pattern=r"^([0-9a-zA-Z]+)(-[0-9a-zA-Z]+)+$",
+        description="Platform identifier", 
+        min_length=1
+    )
+    package: str = Field(..., pattern=r"^([A-Za-z]+)$", description="Package name", min_length=1)
+    description: str = Field(..., pattern=r"^(.|\s)*$", description="Event description", min_length=1)
+    event_receiver_id: str = Field(..., pattern=r"^([0-9A-Za-z]{26})$", description="Event receiver ID", min_length=1)
     success: bool = Field(..., description="Success status")
     payload: Dict[str, Any] = Field(..., description="Event payload data")
 
@@ -64,18 +108,38 @@ class EventCreateInput(BaseModel):
 
 class EventReceiverCreateInput(BaseModel):
     """Schema for event receiver creation input"""
-    name: str = Field(..., description="Name of the event receiver", min_length=1)
-    type: str = Field(..., description="Type of the event receiver", min_length=1)
-    version: str = Field(..., description="Version of the event receiver", min_length=1)
-    description: str = Field(..., description="Event receiver description", min_length=1)
+    name: str = Field(
+        ..., 
+        pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
+        description="Name of the event receiver", 
+        min_length=1
+    )
+    type: str = Field(..., pattern=r"^[^ ]+$", description="Type of the event receiver", min_length=1)
+    version: str = Field(
+        ..., 
+        pattern=r"([0-9]+)(\\.[0-9]+)?(\\.[0-9]+)?(-([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?(\\+([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?",
+        description="Version of the event receiver", 
+        min_length=1
+    )
+    description: str = Field(..., pattern=r"^(.|\s)*$", description="Event receiver description", min_length=1)
 
 
 class EventReceiverGroupCreateInput(BaseModel):
     """Schema for event receiver group creation input"""
-    name: str = Field(..., description="Name of the event receiver group", min_length=1)
-    type: str = Field(..., description="Type of the event receiver group", min_length=1)
-    version: str = Field(..., description="Version of the event receiver group", min_length=1)
-    description: str = Field(..., description="Event receiver group description", min_length=1)
+    name: str = Field(
+        ..., 
+        pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
+        description="Name of the event receiver group", 
+        min_length=1
+    )
+    type: str = Field(..., pattern=r"^[^ ]+$", description="Type of the event receiver group", min_length=1)
+    version: str = Field(
+        ..., 
+        pattern=r"([0-9]+)(\\.[0-9]+)?(\\.[0-9]+)?(-([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?(\\+([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?",
+        description="Version of the event receiver group", 
+        min_length=1
+    )
+    description: str = Field(..., pattern=r"^(.|\s)*$", description="Event receiver group description", min_length=1)
     event_receiver_ids: List[str] = Field(..., description="List of event receiver IDs")
 
     @field_validator('event_receiver_ids')
@@ -83,8 +147,12 @@ class EventReceiverGroupCreateInput(BaseModel):
     def validate_event_receiver_ids(cls, v):
         if not v:  # Check if list is empty
             raise ValidationError('Event receiver IDs list cannot be empty')
-        if not all(isinstance(id_str, str) and len(id_str.strip()) > 0 for id_str in v):
-            raise ValidationError('All event receiver IDs must be non-empty strings')
+        ulid_pattern = re.compile(r"^([0-9A-Za-z]{26})$")
+        for id_str in v:
+            if not isinstance(id_str, str) or len(id_str.strip()) == 0:
+                raise ValidationError('All event receiver IDs must be non-empty strings')
+            if not ulid_pattern.match(id_str):
+                raise ValidationError(f'Event receiver ID "{id_str}" must be a valid ULID (26 alphanumeric characters)')
         return v
 
 
@@ -105,7 +173,7 @@ class EventReceiverGroupCreateDataWrapper(BaseModel):
 
 class FetchInput(BaseModel):
     """Schema for fetch operations input"""
-    id: str = Field(..., description="Resource ID to fetch", min_length=1)
+    id: str = Field(..., pattern=r"^([0-9A-Za-z]{26})$", description="Resource ID to fetch (ULID)", min_length=1)
 
     @field_validator('id')
     @classmethod
@@ -120,17 +188,29 @@ class EventResponse(BaseModel):
     """Schema for validating event response data"""
     model_config = {"populate_by_name": True}
     
-    id: str = Field(..., description="Event ID")
-    name: str = Field(..., description="Event name")
-    version: str = Field(..., description="Event version")
-    release: str = Field(..., description="Release version")
-    platform_id: str = Field(..., description="Platform identifier")
-    package: str = Field(..., description="Package name")
-    description: str = Field(..., description="Event description")
+    id: str = Field(..., pattern=r"^([0-9A-Za-z]{26})$", description="Event ID (ULID)")
+    name: str = Field(
+        ..., 
+        pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
+        description="Event name"
+    )
+    version: str = Field(
+        ..., 
+        pattern=r"([0-9]+)(\\.[0-9]+)?(\\.[0-9]+)?(-([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?(\\+([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?",
+        description="Event version"
+    )
+    release: str = Field(..., pattern=r"^\S+$", description="Release version")
+    platform_id: str = Field(
+        ..., 
+        pattern=r"^([0-9a-zA-Z]+)(-[0-9a-zA-Z]+)+$",
+        description="Platform identifier"
+    )
+    package: str = Field(..., pattern=r"^([A-Za-z]+)$", description="Package name")
+    description: str = Field(..., pattern=r"^(.|\s)*$", description="Event description")
     payload: Dict[str, Any] = Field(default_factory=dict, description="Event payload")
     success: bool = Field(..., description="Success status")
     created_at: Optional[str] = Field(None, description="Creation timestamp")
-    event_receiver_id: str = Field(..., description="Event receiver ID")
+    event_receiver_id: str = Field(..., pattern=r"^([0-9A-Za-z]{26})$", description="Event receiver ID (ULID)")
     event_receiver: Dict[str, Any] = Field(
         default_factory=dict, 
         description="Event receiver data",
@@ -149,13 +229,21 @@ class EventResponse(BaseModel):
 
 class EventReceiverResponse(BaseModel):
     """Schema for validating event receiver response data"""
-    id: str = Field(..., description="Event receiver ID")
-    name: str = Field(..., description="Event receiver name")
-    type: str = Field(..., description="Event receiver type")
-    version: str = Field(..., description="Event receiver version")
-    description: str = Field(..., description="Event receiver description")
+    id: str = Field(..., pattern=r"^([0-9A-Za-z]{26})$", description="Event receiver ID (ULID)")
+    name: str = Field(
+        ..., 
+        pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
+        description="Event receiver name"
+    )
+    type: str = Field(..., pattern=r"^[^ ]+$", description="Event receiver type")
+    version: str = Field(
+        ..., 
+        pattern=r"([0-9]+)(\\.[0-9]+)?(\\.[0-9]+)?(-([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?(\\+([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?",
+        description="Event receiver version"
+    )
+    description: str = Field(..., pattern=r"^(.|\s)*$", description="Event receiver description")
     schema_data: Dict[str, Any] = Field(default_factory=dict, description="Event receiver schema", alias="schema")
-    fingerprint: Optional[str] = Field(None, description="Event receiver fingerprint")
+    fingerprint: Optional[str] = Field(None, pattern=r"^([A-Fa-f0-9]{64})$", description="Event receiver fingerprint (SHA256)")
     created_at: Optional[str] = Field(None, description="Creation timestamp")
 
     @field_validator('schema_data')
@@ -170,14 +258,22 @@ class EventReceiverResponse(BaseModel):
 
 class EventReceiverGroupResponse(BaseModel):
     """Schema for validating event receiver group response data"""
-    id: str = Field(..., description="Event receiver group ID")
-    name: str = Field(..., description="Event receiver group name")
-    type: str = Field(..., description="Event receiver group type")
-    version: str = Field(..., description="Event receiver group version")
-    description: str = Field(..., description="Event receiver group description")
+    id: str = Field(..., pattern=r"^([0-9A-Za-z]{26})$", description="Event receiver group ID (ULID)")
+    name: str = Field(
+        ..., 
+        pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
+        description="Event receiver group name"
+    )
+    type: str = Field(..., pattern=r"^[^ ]+$", description="Event receiver group type")
+    version: str = Field(
+        ..., 
+        pattern=r"([0-9]+)(\\.[0-9]+)?(\\.[0-9]+)?(-([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?(\\+([0-9A-Za-z\\-]+(\\.[0-9A-Za-z\\-]+)*))?",
+        description="Event receiver group version"
+    )
+    description: str = Field(..., pattern=r"^(.|\s)*$", description="Event receiver group description")
     enabled: bool = Field(default=True, description="Group enabled status")
     event_receiver_ids: List[str] = Field(default_factory=list, description="List of event receiver IDs")
-    fingerprint: Optional[str] = Field(None, description="Event receiver group fingerprint")
+    fingerprint: Optional[str] = Field(None, pattern=r"^([A-Fa-f0-9]{64})$", description="Event receiver group fingerprint (SHA256)")
     created_at: Optional[str] = Field(None, description="Creation timestamp")
     updated_at: Optional[str] = Field(None, description="Last update timestamp")
 
@@ -188,6 +284,12 @@ class EventReceiverGroupResponse(BaseModel):
             return []
         if not isinstance(v, list):
             raise ValidationError('Event receiver IDs must be a list')
+        ulid_pattern = re.compile(r"^([0-9A-Za-z]{26})$")
+        for id_str in v:
+            if not isinstance(id_str, str):
+                raise ValidationError('All event receiver IDs must be strings')
+            if not ulid_pattern.match(id_str):
+                raise ValidationError(f'Event receiver ID "{id_str}" must be a valid ULID (26 alphanumeric characters)')
         return v
 
 
