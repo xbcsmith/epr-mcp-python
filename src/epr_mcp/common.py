@@ -5,7 +5,7 @@
 import logging
 import os
 import sys
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .errors import debug_except_hook
 from .models import GraphQLQuery

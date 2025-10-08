@@ -35,7 +35,7 @@ docker-compose up -d
 docker-compose logs -f epr-mcp-server
 ```
 
-See [DOCKER_COMPOSE.md](./docs/DOCKER_COMPOSE.md) for detailed Docker Compose documentation.
+See [docker_compose.md](./docs/docker_compose.md) for detailed Docker Compose documentation.
 
 ### Development dependencies
 
