@@ -17,10 +17,10 @@ except ImportError:
     yaml = None
 
 import httpx
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
-from pydantic import ValidationError
+from pydantic import ValidationError, Field
 
 from .common import get_search_query, get_mutation_query
 from .errors import debug_except_hook
@@ -32,7 +32,10 @@ from .schemas import (
     validate_event_receiver_group_response,
     validate_event_list_response,
     validate_event_receiver_list_response,
-    validate_event_receiver_group_list_response
+    validate_event_receiver_group_list_response,
+    EventResponse,
+    EventReceiverResponse,
+    EventReceiverGroupResponse
 )
 
 logger = logging.getLogger(__name__)
@@ -47,17 +50,28 @@ def run(cfg):
     mcp = FastMCP("EPR MCP Server", "1.0.0")
 
     @mcp.tool(title="Fetch Event", description="Fetch an event from EPR")
-    async def fetch_event(epr_url: str, id: str) -> str:
+    async def fetch_event(
+        ctx: Context,
+        id: str = Field(description="Unique identifier of the event to fetch")
+    ) -> str:
         """Fetch an event from the EPR"""
         try:
+            await ctx.debug(f"Starting fetch_event for ID: {id}")
+            
             # Validate input using schema
             validated_data = validate_input("fetch_event", id)
             event_id = validated_data["id"]
+            await ctx.debug(f"Input validation successful, validated ID: {event_id}")
+            
+            url = f"{cfg.url}/api/v1/events/{event_id}"
+            await ctx.debug(f"Making GET request to: {url}")
             
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{epr_url}/api/v1/events/{event_id}")
+                response = await client.get(url)
+                await ctx.debug(f"GET response status: {response.status_code}")
                 if response.status_code == 200:
                     response_data = response.json()
+                    await ctx.debug(f"Raw response data type: {type(response_data)}")
                     # Handle case where API wraps data in a 'data' field
                     event_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
                     
@@ -69,33 +83,49 @@ def run(cfg):
                         event_data = event_data[0]
                     
                     # Validate response data with Pydantic schema
-                    validated_event_data = validate_event_response(event_data)
-                    return json.dumps(validated_event_data, indent=2)
+                    validated_event = EventResponse.model_validate(event_data)
+                    await ctx.debug("Response validation successful")
+                    return json.dumps(validated_event.model_dump(), indent=2)
                 else:
                     return f"Failed to fetch event: {response.status_code} - {response.text}"
         except ValidationError as e:
             # Handle both input validation and response validation errors
             if "response validation failed" in str(e):
+                await ctx.error(f"Response validation error in fetch_event: {str(e)}")
                 return f"Response validation error: {str(e)}"
             else:
+                await ctx.error(f"Input validation error in fetch_event: {str(e)}")
                 return f"Input validation error: {str(e)}"
         except ValueError as e:
+            await ctx.error(f"Input validation error in fetch_event: {str(e)}")
             return f"Input validation error: {str(e)}"
         except Exception as e:
+            await ctx.error(f"Error fetching event: {str(e)}")
             return f"Error fetching event: {str(e)}"
 
     @mcp.tool(title="Fetch Event Receiver", description="Fetch an event receiver from EPR")
-    async def fetch_receiver(epr_url: str, id: str) -> str:
+    async def fetch_receiver(
+        ctx: Context,
+        id: str = Field(description="Unique identifier of the event receiver to fetch")
+    ) -> str:
         """Fetch an event receiver from the EPR"""
         try:
+            await ctx.debug(f"Starting fetch_receiver for ID: {id}")
+            
             # Validate input using schema
             validated_data = validate_input("fetch_receiver", id)
             receiver_id = validated_data["id"]
+            await ctx.debug(f"Input validation successful, validated ID: {receiver_id}")
+            
+            url = f"{cfg.url}/api/v1/receivers/{receiver_id}"
+            await ctx.debug(f"Making GET request to: {url}")
             
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{epr_url}/api/v1/receivers/{receiver_id}")
+                response = await client.get(url)
+                await ctx.debug(f"GET response status: {response.status_code}")
                 if response.status_code == 200:
                     response_data = response.json()
+                    await ctx.debug(f"Raw response data type: {type(response_data)}")
                     # Handle case where API wraps data in a 'data' field
                     receiver_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
                     
@@ -107,33 +137,49 @@ def run(cfg):
                         receiver_data = receiver_data[0]
                     
                     # Validate response data with Pydantic schema
-                    validated_receiver_data = validate_event_receiver_response(receiver_data)
-                    return json.dumps(validated_receiver_data, indent=2)
+                    validated_receiver = EventReceiverResponse.model_validate(receiver_data)
+                    await ctx.debug("Response validation successful")
+                    return json.dumps(validated_receiver.model_dump(), indent=2)
                 else:
                     return f"Failed to fetch event receiver: {response.status_code} - {response.text}"
         except ValidationError as e:
             # Handle both input validation and response validation errors
             if "response validation failed" in str(e):
+                await ctx.error(f"Response validation error in fetch_receiver: {str(e)}")
                 return f"Response validation error: {str(e)}"
             else:
+                await ctx.error(f"Input validation error in fetch_receiver: {str(e)}")
                 return f"Input validation error: {str(e)}"
         except ValueError as e:
+            await ctx.error(f"Input validation error in fetch_receiver: {str(e)}")
             return f"Input validation error: {str(e)}"
         except Exception as e:
+            await ctx.error(f"Error fetching event receiver: {str(e)}")
             return f"Error fetching event receiver: {str(e)}"
 
     @mcp.tool(title="Fetch Event Receiver Group", description="Fetch an event receiver group from EPR")
-    async def fetch_group(epr_url: str, id: str) -> str:
+    async def fetch_group(
+        ctx: Context,
+        id: str = Field(description="Unique identifier of the event receiver group to fetch")
+    ) -> str:
         """Fetch an event receiver group from the EPR"""
         try:
+            await ctx.debug(f"Starting fetch_group for ID: {id}")
+            
             # Validate input using schema
             validated_data = validate_input("fetch_group", id)
             group_id = validated_data["id"]
+            await ctx.debug(f"Input validation successful, validated ID: {group_id}")
+            
+            url = f"{cfg.url}/api/v1/groups/{group_id}"
+            await ctx.debug(f"Making GET request to: {url}")
             
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{epr_url}/api/v1/groups/{group_id}")
+                response = await client.get(url)
+                await ctx.debug(f"GET response status: {response.status_code}")
                 if response.status_code == 200:
                     response_data = response.json()
+                    await ctx.debug(f"Raw response data type: {type(response_data)}")
                     # Handle case where API wraps data in a 'data' field
                     group_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
                     
@@ -145,28 +191,39 @@ def run(cfg):
                         group_data = group_data[0]
                     
                     # Validate response data with Pydantic schema
-                    validated_group_data = validate_event_receiver_group_response(group_data)
-                    return json.dumps(validated_group_data, indent=2)
+                    validated_group = EventReceiverGroupResponse.model_validate(group_data)
+                    await ctx.debug("Response validation successful")
+                    return json.dumps(validated_group.model_dump(), indent=2)
                 else:
                     return f"Failed to fetch event receiver group: {response.status_code} - {response.text}"
         except ValidationError as e:
             # Handle both input validation and response validation errors
             if "response validation failed" in str(e):
+                await ctx.error(f"Response validation error in fetch_group: {str(e)}")
                 return f"Response validation error: {str(e)}"
             else:
+                await ctx.error(f"Input validation error in fetch_group: {str(e)}")
                 return f"Input validation error: {str(e)}"
         except ValueError as e:
+            await ctx.error(f"Input validation error in fetch_group: {str(e)}")
             return f"Input validation error: {str(e)}"
         except Exception as e:
+            await ctx.error(f"Error fetching event receiver group: {str(e)}")
             return f"Error fetching event receiver group: {str(e)}"
 
     @mcp.tool(title="Search Events", description="Search for events in EPR")
-    async def search_events(epr_url: str, data: dict) -> str:
+    async def search_events(
+        ctx: Context,
+        data: dict = Field(description="Search criteria including name, version, package, platform_id, success status, etc.")
+    ) -> str:
         """Search for events in the EPR"""
         try:
+            await ctx.debug(f"Starting search_events with data: {data}")
+            
             # Validate input using schema
             validated_data = validate_input("search_events", data)
             search_params = validated_data["data"]
+            await ctx.debug(f"Input validation successful, search params: {search_params}")
             
             fields = [
                 "id",
@@ -182,107 +239,170 @@ def run(cfg):
                 "payload",
             ]
             query = get_search_query(operation="events", params=search_params, fields=fields)
+            await ctx.debug(f"Generated GraphQL query: {query.as_dict_query()}")
+            
+            url = f"{cfg.url}/api/v1/graphql/query"
+            await ctx.debug(f"Making POST request to: {url}")
+            
             async with httpx.AsyncClient() as client:
                 headers = {"Content-Type": "application/json"}
-                response = await client.post(f"{epr_url}/api/v1/graphql/query", json=query.as_dict_query(), headers=headers)
+                response = await client.post(url, json=query.as_dict_query(), headers=headers)
+                await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
+                    await ctx.debug(f"Raw GraphQL response structure: {type(result)}")
                     events_data = result.get('data', {}).get('events', [])
+                    await ctx.debug(f"Extracted events data: {len(events_data)} events found")
                     # Validate response data with Pydantic schema
                     validated_events = validate_event_list_response(events_data)
+                    await ctx.debug("Response validation successful")
                     return json.dumps(validated_events, indent=2)
                 else:
                     return f"Failed to search events: {response.status_code} - {response.text}"
         except ValidationError as e:
             # Handle both input validation and response validation errors
             if "response validation failed" in str(e):
+                await ctx.error(f"Response validation error in search_events: {str(e)}")
                 return f"Response validation error: {str(e)}"
             else:
+                await ctx.error(f"Input validation error in search_events: {str(e)}")
                 return f"Input validation error: {str(e)}"
         except ValueError as e:
+            await ctx.error(f"Input validation error in search_events: {str(e)}")
             return f"Input validation error: {str(e)}"
         except Exception as e:
+            await ctx.error(f"Error searching events: {str(e)}")
             return f"Error searching events: {str(e)}"
 
     @mcp.tool(title="Search Event Receivers", description="Search for event receivers in EPR")
-    async def search_receivers(epr_url: str, data: dict) -> str:
+    async def search_receivers(
+        ctx: Context,
+        data: dict = Field(description="Search criteria including name, type, version, description, etc.")
+    ) -> str:
         """Search for event receivers in the EPR"""
         try:
+            await ctx.debug(f"Starting search_receivers with data: {data}")
+            
             # Validate input using schema
             validated_data = validate_input("search_receivers", data)
             search_params = validated_data["data"]
+            await ctx.debug(f"Input validation successful, search params: {search_params}")
             
             fields = ["id", "name", "type", "version", "description", "schema", "fingerprint", "created_at"]
             query = get_search_query(operation="event_receivers", params=search_params, fields=fields)
+            await ctx.debug(f"Generated GraphQL query: {query.as_dict_query()}")
+            
+            url = f"{cfg.url}/api/v1/graphql/query"
+            await ctx.debug(f"Making POST request to: {url}")
+            
             async with httpx.AsyncClient() as client:
                 headers = {"Content-Type": "application/json"}
-                response = await client.post(f"{epr_url}/api/v1/graphql/query", json=query.as_dict_query(), headers=headers)
+                response = await client.post(url, json=query.as_dict_query(), headers=headers)
+                await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
+                    await ctx.debug(f"Raw GraphQL response structure: {type(result)}")
                     receivers_data = result.get('data', {}).get('event_receivers', [])
+                    await ctx.debug(f"Extracted receivers data: {len(receivers_data)} receivers found")
                     # Validate response data with Pydantic schema
                     validated_receivers = validate_event_receiver_list_response(receivers_data)
+                    await ctx.debug("Response validation successful")
                     return json.dumps(validated_receivers, indent=2)
                 else:
                     return f"Failed to search event receivers: {response.status_code} - {response.text}"
         except ValidationError as e:
             # Handle both input validation and response validation errors
             if "response validation failed" in str(e):
+                await ctx.error(f"Response validation error in search_receivers: {str(e)}")
                 return f"Response validation error: {str(e)}"
             else:
+                await ctx.error(f"Input validation error in search_receivers: {str(e)}")
                 return f"Input validation error: {str(e)}"
         except ValueError as e:
+            await ctx.error(f"Input validation error in search_receivers: {str(e)}")
             return f"Input validation error: {str(e)}"
         except Exception as e:
+            await ctx.error(f"Error searching event receivers: {str(e)}")
             return f"Error searching event receivers: {str(e)}"
 
     @mcp.tool(title="Search Event Receiver Groups", description="Search for event receiver groups in EPR")
-    async def search_groups(epr_url: str, data: dict) -> str:
+    async def search_groups(
+        ctx: Context,
+        data: dict = Field(description="Search criteria including name, type, version, description, enabled status, etc.")
+    ) -> str:
         """Search for event receiver groups in the EPR"""
         try:
+            await ctx.debug(f"Starting search_groups with data: {data}")
+            
             # Validate input using schema
             validated_data = validate_input("search_groups", data)
             search_params = validated_data["data"]
+            await ctx.debug(f"Input validation successful, search params: {search_params}")
             
             fields = ["id", "name", "type", "version", "description", "enabled", "event_receiver_ids", "fingerprint", "created_at", "updated_at"]
             query = get_search_query(operation="event_receiver_groups", params=search_params, fields=fields)
+            await ctx.debug(f"Generated GraphQL query: {query.as_dict_query()}")
+            
+            url = f"{cfg.url}/api/v1/graphql/query"
+            await ctx.debug(f"Making POST request to: {url}")
+            
             async with httpx.AsyncClient() as client:
                 headers = {"Content-Type": "application/json"}
-                response = await client.post(f"{epr_url}/api/v1/graphql/query", json=query.as_dict_query(), headers=headers)
+                response = await client.post(url, json=query.as_dict_query(), headers=headers)
+                await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
+                    await ctx.debug(f"Raw GraphQL response structure: {type(result)}")
                     groups_data = result.get('data', {}).get('event_receiver_groups', [])
+                    await ctx.debug(f"Extracted groups data: {len(groups_data)} groups found")
                     # Validate response data with Pydantic schema
                     validated_groups = validate_event_receiver_group_list_response(groups_data)
+                    await ctx.debug("Response validation successful")
                     return json.dumps(validated_groups, indent=2)
                 else:
                     return f"Failed to search event receiver groups: {response.status_code} - {response.text}"
         except ValidationError as e:
             # Handle both input validation and response validation errors
             if "response validation failed" in str(e):
+                await ctx.error(f"Response validation error in search_groups: {str(e)}")
                 return f"Response validation error: {str(e)}"
             else:
+                await ctx.error(f"Input validation error in search_groups: {str(e)}")
                 return f"Input validation error: {str(e)}"
         except ValueError as e:
+            await ctx.error(f"Input validation error in search_groups: {str(e)}")
             return f"Input validation error: {str(e)}"
         except Exception as e:
+            await ctx.error(f"Error searching event receiver groups: {str(e)}")
             return f"Error searching event receiver groups: {str(e)}"
 
     @mcp.tool(title="Create Event", description="Create a new event in EPR")
-    async def create_event(epr_url: str, event_data: dict) -> str:
+    async def create_event(
+        ctx: Context,
+        event_data: dict = Field(description="Event creation data containing name, version, release, platform_id, package, description, event_receiver_id, success status, and payload")
+    ) -> str:
         """Create a new event in the EPR"""
         try:
+            await ctx.debug(f"Starting create_event with data: {event_data}")
+            
             # Validate input using schema
             validated_data = validate_input("create_event", event_data)
             create_params = validated_data["data"]
+            await ctx.debug(f"Input validation successful, create params: {create_params}")
             
             # Create Event model from validated data for better structure
             event = Event(**create_params)
+            await ctx.debug(f"Created Event model: {event.as_dict_query()}")
+            
+            url = f"{cfg.url}/api/v1/events"
+            await ctx.debug(f"Making POST request to: {url}")
             
             async with httpx.AsyncClient() as client:
-                response = await client.post(f"{epr_url}/api/v1/events", json=event.as_dict_query())
+                response = await client.post(url, json=event.as_dict_query())
+                await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 201:
                     response_data = response.json()
+                    await ctx.debug(f"Raw response data type: {type(response_data)}")
                     # Handle case where API wraps data in a 'data' field
                     created_event_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
                     
@@ -295,35 +415,52 @@ def run(cfg):
                     
                     # Validate response data with Pydantic schema
                     validated_event_data = validate_event_response(created_event_data)
+                    await ctx.debug("Event created and response validation successful")
                     return json.dumps({"message": "Event created successfully", "event": validated_event_data}, indent=2)
                 else:
                     return f"Failed to create event: {response.status_code} - {response.text}"
         except ValidationError as e:
             # Handle both input validation and response validation errors
             if "response validation failed" in str(e):
+                await ctx.error(f"Response validation error in create_event: {str(e)}")
                 return f"Response validation error: {str(e)}"
             else:
+                await ctx.error(f"Input validation error in create_event: {str(e)}")
                 return f"Input validation error: {str(e)}"
         except ValueError as e:
+            await ctx.error(f"Input validation error in create_event: {str(e)}")
             return f"Input validation error: {str(e)}"
         except Exception as e:
+            await ctx.error(f"Error creating event: {str(e)}")
             return f"Error creating event: {str(e)}"
 
     @mcp.tool(title="Create Event Receiver", description="Create a new event receiver in EPR")
-    async def create_receiver(epr_url: str, receiver_data: dict) -> str:
+    async def create_receiver(
+        ctx: Context,
+        receiver_data: dict = Field(description="Event receiver creation data containing name, type, version, and description")
+    ) -> str:
         """Create a new event receiver in the EPR"""
         try:
+            await ctx.debug(f"Starting create_receiver with data: {receiver_data}")
+            
             # Validate input using schema
             validated_data = validate_input("create_receiver", receiver_data)
             create_params = validated_data["data"]
+            await ctx.debug(f"Input validation successful, create params: {create_params}")
             
             # Create EventReceiver model from validated data for better structure
             receiver = EventReceiver(**create_params)
+            await ctx.debug(f"Created EventReceiver model: {receiver.as_dict_query()}")
+            
+            url = f"{cfg.url}/api/v1/receivers"
+            await ctx.debug(f"Making POST request to: {url}")
             
             async with httpx.AsyncClient() as client:
-                response = await client.post(f"{epr_url}/api/v1/receivers", json=receiver.as_dict_query())
+                response = await client.post(url, json=receiver.as_dict_query())
+                await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 201:
                     response_data = response.json()
+                    await ctx.debug(f"Raw response data type: {type(response_data)}")
                     # Handle case where API wraps data in a 'data' field
                     created_receiver_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
                     
@@ -336,35 +473,52 @@ def run(cfg):
                     
                     # Validate response data with Pydantic schema
                     validated_receiver_data = validate_event_receiver_response(created_receiver_data)
+                    await ctx.debug("Event receiver created and response validation successful")
                     return json.dumps({"message": "Event receiver created successfully", "receiver": validated_receiver_data}, indent=2)
                 else:
                     return f"Failed to create event receiver: {response.status_code} - {response.text}"
         except ValidationError as e:
             # Handle both input validation and response validation errors
             if "response validation failed" in str(e):
+                await ctx.error(f"Response validation error in create_receiver: {str(e)}")
                 return f"Response validation error: {str(e)}"
             else:
+                await ctx.error(f"Input validation error in create_receiver: {str(e)}")
                 return f"Input validation error: {str(e)}"
         except ValueError as e:
+            await ctx.error(f"Input validation error in create_receiver: {str(e)}")
             return f"Input validation error: {str(e)}"
         except Exception as e:
+            await ctx.error(f"Error creating event receiver: {str(e)}")
             return f"Error creating event receiver: {str(e)}"
 
     @mcp.tool(title="Create Event Receiver Group", description="Create a new event receiver group in EPR")
-    async def create_group(epr_url: str, group_data: dict) -> str:
+    async def create_group(
+        ctx: Context,
+        group_data: dict = Field(description="Event receiver group creation data containing name, type, version, description, and event_receiver_ids list")
+    ) -> str:
         """Create a new event receiver group in the EPR"""
         try:
+            await ctx.debug(f"Starting create_group with data: {group_data}")
+            
             # Validate input using schema
             validated_data = validate_input("create_group", group_data)
             create_params = validated_data["data"]
+            await ctx.debug(f"Input validation successful, create params: {create_params}")
             
             # Create EventReceiverGroup model from validated data for better structure
             group = EventReceiverGroup(**create_params)
+            await ctx.debug(f"Created EventReceiverGroup model: {group.as_dict_query()}")
+            
+            url = f"{cfg.url}/api/v1/groups"
+            await ctx.debug(f"Making POST request to: {url}")
             
             async with httpx.AsyncClient() as client:
-                response = await client.post(f"{epr_url}/api/v1/groups", json=group.as_dict_query())
+                response = await client.post(url, json=group.as_dict_query())
+                await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 201:
                     response_data = response.json()
+                    await ctx.debug(f"Raw response data type: {type(response_data)}")
                     # Handle case where API wraps data in a 'data' field
                     created_group_data = response_data.get('data', response_data) if isinstance(response_data, dict) else response_data
                     
@@ -377,18 +531,23 @@ def run(cfg):
                     
                     # Validate response data with Pydantic schema
                     validated_group_data = validate_event_receiver_group_response(created_group_data)
+                    await ctx.debug("Event receiver group created and response validation successful")
                     return json.dumps({"message": "Event receiver group created successfully", "group": validated_group_data}, indent=2)
                 else:
                     return f"Failed to create event receiver group: {response.status_code} - {response.text}"
         except ValidationError as e:
             # Handle both input validation and response validation errors
             if "response validation failed" in str(e):
+                await ctx.error(f"Response validation error in create_group: {str(e)}")
                 return f"Response validation error: {str(e)}"
             else:
+                await ctx.error(f"Input validation error in create_group: {str(e)}")
                 return f"Input validation error: {str(e)}"
         except ValueError as e:
+            await ctx.error(f"Input validation error in create_group: {str(e)}")
             return f"Input validation error: {str(e)}"
         except Exception as e:
+            await ctx.error(f"Error creating event receiver group: {str(e)}")
             return f"Error creating event receiver group: {str(e)}"
 
     @mcp.custom_route("/health", methods=["GET"])
