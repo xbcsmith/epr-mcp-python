@@ -23,7 +23,7 @@ class EventSearchInput(BaseModel):
     )
     release: Optional[str] = Field(None, pattern=r"^\S+$", description="Release version")
     platform_id: Optional[str] = Field(
-        None, pattern=r"^([0-9a-zA-Z]+)(-[0-9a-zA-Z]+)+$", description="Platform identifier"
+        None, pattern=r"^([0-9a-zA-Z]+)(-[0-9a-zA-Z]+)*$", description="Platform identifier"
     )
     package: Optional[str] = Field(None, pattern=r"^([A-Za-z]+)$", description="Package name")
     description: Optional[str] = Field(None, pattern=r"^(.|\s)*$", description="Event description")
@@ -119,7 +119,10 @@ class EventCreateInput(BaseModel):
     )
     release: str = Field(..., pattern=r"^\S+$", description="Release version", min_length=1)
     platform_id: str = Field(
-        ..., pattern=r"^([0-9a-zA-Z]+)(-[0-9a-zA-Z]+)+$", description="Platform identifier", min_length=1
+        ...,
+        pattern=r"^([0-9a-zA-Z]+)(-[0-9a-zA-Z]+)*$",
+        description="Platform identifier",
+        min_length=1,
     )
     package: str = Field(..., pattern=r"^([A-Za-z]+)$", description="Package name", min_length=1)
     description: str = Field(..., pattern=r"^(.|\s)*$", description="Event description", min_length=1)
@@ -278,7 +281,7 @@ class EventResponse(BaseModel):
         description="Event version",
     )
     release: str = Field(..., pattern=r"^\S+$", description="Release version")
-    platform_id: str = Field(..., pattern=r"^([0-9a-zA-Z]+)(-[0-9a-zA-Z]+)+$", description="Platform identifier")
+    platform_id: str = Field(..., pattern=r"^([0-9a-zA-Z]+)(-[0-9a-zA-Z]+)*$", description="Platform identifier")
     package: str = Field(..., pattern=r"^([A-Za-z]+)$", description="Package name")
     description: str = Field(..., pattern=r"^(.|\s)*$", description="Event description")
     payload: Dict[str, Any] = Field(default_factory=dict, description="Event payload")
@@ -511,7 +514,7 @@ def validate_event_response(data: Dict[str, Any]) -> Dict[str, Any]:
         validated = EventResponse(**data)
         return validated.model_dump(by_alias=True)
     except ValidationError as e:
-        raise ValidationError(f"Event response validation failed: {e!s}") from e
+        raise ValueError(f"Event response validation failed: {e!s}") from e
 
 
 def validate_event_receiver_response(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -531,7 +534,7 @@ def validate_event_receiver_response(data: Dict[str, Any]) -> Dict[str, Any]:
         validated = EventReceiverResponse(**data)
         return validated.model_dump(by_alias=True)
     except ValidationError as e:
-        raise ValidationError(f"Event receiver response validation failed: {e!s}") from e
+        raise ValueError(f"Event receiver response validation failed: {e!s}") from e
 
 
 def validate_event_receiver_group_response(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -551,7 +554,7 @@ def validate_event_receiver_group_response(data: Dict[str, Any]) -> Dict[str, An
         validated = EventReceiverGroupResponse(**data)
         return validated.model_dump(by_alias=True)
     except ValidationError as e:
-        raise ValidationError(f"Event receiver group response validation failed: {e!s}") from e
+        raise ValueError(f"Event receiver group response validation failed: {e!s}") from e
 
 
 def validate_event_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -569,8 +572,8 @@ def validate_event_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, A
     """
     try:
         return [validate_event_response(event) for event in data]
-    except ValidationError as e:
-        raise ValidationError(f"Event list response validation failed: {e!s}") from e
+    except (ValidationError, ValueError) as e:
+        raise ValueError(f"Event list response validation failed: {e!s}") from e
 
 
 def validate_event_receiver_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -588,8 +591,8 @@ def validate_event_receiver_list_response(data: List[Dict[str, Any]]) -> List[Di
     """
     try:
         return [validate_event_receiver_response(receiver) for receiver in data]
-    except ValidationError as e:
-        raise ValidationError(f"Event receiver list response validation failed: {e!s}") from e
+    except (ValidationError, ValueError) as e:
+        raise ValueError(f"Event receiver list response validation failed: {e!s}") from e
 
 
 def validate_event_receiver_group_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -607,5 +610,5 @@ def validate_event_receiver_group_list_response(data: List[Dict[str, Any]]) -> L
     """
     try:
         return [validate_event_receiver_group_response(group) for group in data]
-    except ValidationError as e:
-        raise ValidationError(f"Event receiver group list response validation failed: {e!s}") from e
+    except (ValidationError, ValueError) as e:
+        raise ValueError(f"Event receiver group list response validation failed: {e!s}") from e

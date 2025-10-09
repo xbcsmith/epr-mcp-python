@@ -6,7 +6,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - EPR_URL=${EPR_URL:-http://localhost:8042}
+      - EPR_URL=${EPR_URL:-http://host.docker.internal:8042}
       - EPR_TOKEN=${EPR_TOKEN}
       - EPR_DEBUG=${EPR_DEBUG:-false}
       - MCP_HOST=0.0.0.0
