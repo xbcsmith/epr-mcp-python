@@ -20,6 +20,8 @@ pip install -e .
 
 ### Docker Development
 
+#### Option 1: Docker Compose (Recommended)
+
 ```bash
 git clone git@github.com:xbcsmith/epr-mcp-python.git
 cd epr-mcp-python
@@ -34,6 +36,64 @@ docker-compose up -d
 # View logs
 docker-compose logs -f epr-mcp-server
 ```
+
+#### Option 2: Direct Docker Run
+
+```bash
+git clone git@github.com:xbcsmith/epr-mcp-python.git
+cd epr-mcp-python
+
+# Build the Docker image
+docker build -t epr-mcp-server .
+
+# Run with environment variables
+docker run -d \
+  --name epr-mcp-server \
+  -p 8000:8000 \
+  -e EPR_URL=http://host.docker.internal:8042 \
+  -e EPR_TOKEN=your-epr-api-token \
+  -e EPR_DEBUG=false \
+  epr-mcp-server
+
+# View logs
+docker logs -f epr-mcp-server
+
+# Stop the container
+docker stop epr-mcp-server
+docker rm epr-mcp-server
+```
+
+#### Docker Run Options
+
+**Basic run:**
+```bash
+docker run -p 8000:8000 \
+  -e EPR_URL=http://host.docker.internal:8042 \
+  -e EPR_TOKEN=your-token \
+  epr-mcp-server
+```
+
+**With volume for logs:**
+```bash
+docker run -p 8000:8000 \
+  -v $(pwd)/logs:/app/logs \
+  -e EPR_URL=http://host.docker.internal:8042 \
+  -e EPR_TOKEN=your-token \
+  epr-mcp-server
+```
+
+**Interactive mode (for debugging):**
+```bash
+docker run -it --rm \
+  -p 8000:8000 \
+  -e EPR_URL=http://host.docker.internal:8042 \
+  -e EPR_TOKEN=your-token \
+  epr-mcp-server
+```
+
+**IMPORTANT:** When running in Docker, EPR_URL must point to the correct address:
+- If EPR server runs on host: `EPR_URL=http://host.docker.internal:8042`
+- If EPR server runs in container: `EPR_URL=http://container-name:8042`
 
 See [docker_compose.md](./docs/docker_compose.md) for detailed Docker Compose documentation.
 
@@ -216,3 +276,27 @@ python -m epr_mcp.main start
 ```
 
 The server will be available at `http://localhost:8000/mcp` for MCP connections and `http://localhost:8000/docs` for API documentation.
+
+
+#### Run MCP Inspector
+
+```bash
+npx @modelcontextprotocol/inspector
+```
+
+## Troubleshooting
+
+Having connection issues? See the [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) for detailed solutions to common problems.
+
+**Quick fixes for Docker:**
+- Connection failed errors: Use `EPR_URL=http://host.docker.internal:8042` in your `.env` file
+- Check if EPR server is running: `curl http://localhost:8042/health`
+- View logs: `docker-compose logs -f epr-mcp-server`
+
+## Documentation
+
+- [Docker Setup Guide](./docs/DOCKER_COMPOSE.md) - Docker Compose and direct Docker usage
+- [Docker Quick Reference](./docs/DOCKER_REFERENCE.md) - Common Docker commands and examples
+- [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Solutions to common issues
+- [OpenAPI Implementation](./docs/OPENAPI_IMPLEMENTATION.md)
+- [Schema Validation](./docs/SCHEMA_VALIDATION.md)

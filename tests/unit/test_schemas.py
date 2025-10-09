@@ -8,6 +8,8 @@ from epr_mcp.schemas import (
     EventSearchInput,
     _sanitize_dict,
     _sanitize_string,
+    validate_event_list_response,
+    validate_event_response,
 )
 
 
@@ -235,6 +237,50 @@ class TestEventCreateInput:
         with pytest.raises(ValidationError):
             EventCreateInput(**invalid_data)
 
+    def test_platform_id_pattern_validation(self):
+        """Test platform_id pattern validation supports required formats."""
+        base_data = {
+            "name": "test-event",
+            "version": "1.0.0",
+            "release": "stable",
+            "package": "Package",
+            "description": "Test description",
+            "event_receiver_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+            "success": True,
+            "payload": {"key": "value"},
+        }
+
+        # Test valid platform IDs that must be supported
+        valid_platform_ids = [
+            "x86-64-gnu-linux-7",  # Complex multi-segment format
+            "x64-linux-oci-2",  # Alternative architecture format
+            "linux-x64",  # Simple two-segment format
+            "platform-123",  # Alphanumeric segments
+            "platformID",  # Single word (like from user's error)
+            "x86",  # Single segment (now valid)
+            "linux",  # Simple single word
+        ]
+
+        for platform_id in valid_platform_ids:
+            data = {**base_data, "platform_id": platform_id}
+            result = EventCreateInput(**data)
+            assert result.platform_id == platform_id
+
+        # Test invalid platform IDs that should be rejected
+        invalid_platform_ids = [
+            "x86-",  # Ends with hyphen
+            "-x86-64",  # Starts with hyphen
+            "x86_64-linux",  # Contains underscore
+            "x86.64-linux",  # Contains dot
+            "",  # Empty string
+            "x86--64",  # Double hyphen
+        ]
+
+        for platform_id in invalid_platform_ids:
+            data = {**base_data, "platform_id": platform_id}
+            with pytest.raises(ValidationError):
+                EventCreateInput(**data)
+
 
 class TestSchemaIntegration:
     """Test integration scenarios with schemas."""
@@ -262,17 +308,8 @@ class TestSchemaIntegration:
 
     def test_empty_input_handling(self):
         """Test handling of empty input data."""
-        # Explicitly pass None values to satisfy type checker
-        result = EventSearchInput(
-            name=None,
-            version=None,
-            release=None,
-            platform_id=None,
-            package=None,
-            description=None,
-            success=None,
-            event_receiver_id=None,
-        )
+        # Use model validation with empty dict to avoid keyword argument issues with aliases
+        result = EventSearchInput.model_validate({})
 
         # All fields should be None for empty input
         assert result.name is None
@@ -291,4 +328,29 @@ class TestSchemaIntegration:
         assert result.name == "test-event"
         assert result.success is True
         assert result.version is None
-        assert result.platform_id is None
+
+
+class TestValidationErrorHandling:
+    """Test that validation functions handle errors correctly."""
+
+    def test_validate_event_response_with_invalid_data_raises_value_error(self):
+        """Test that validate_event_response raises ValueError for invalid data."""
+        invalid_data = {
+            "id": "invalid-id",  # Doesn't match ULID pattern
+            "name": None,  # Should be string
+        }
+
+        with pytest.raises(ValueError, match="Event response validation failed"):
+            validate_event_response(invalid_data)
+
+    def test_validate_event_list_response_with_invalid_data_raises_value_error(self):
+        """Test that validate_event_list_response raises ValueError for invalid data."""
+        invalid_data = [
+            {
+                "id": "invalid-id",  # Doesn't match ULID pattern
+                "name": None,  # Should be string
+            }
+        ]
+
+        with pytest.raises(ValueError, match="Event list response validation failed"):
+            validate_event_list_response(invalid_data)

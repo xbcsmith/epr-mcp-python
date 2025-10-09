@@ -1,10 +1,14 @@
 # EPR MCP Server Input Validation Schemas
 
-This document describes the input validation schemas implemented for the EPR MCP Server tools.
+This document describes the input validation schemas implemented for the EPR MCP
+Server tools.
 
 ## Overview
 
-The schema validation system uses Pydantic models to ensure that all input data to the MCP tools is properly validated before processing. This helps prevent errors, improves security, and provides clear error messages when invalid data is provided.
+The schema validation system uses Pydantic models to ensure that all input data
+to the MCP tools is properly validated before processing. This helps prevent
+errors, improves security, and provides clear error messages when invalid data
+is provided.
 
 ## Schema Components
 
@@ -17,11 +21,13 @@ The schema validation system uses Pydantic models to ensure that all input data 
 ### Search Schemas
 
 #### EventSearchInput
+
 Validates input for searching events:
+
 ```python
 {
     "name": "optional string",
-    "version": "optional string", 
+    "version": "optional string",
     "release": "optional string",
     "platform_id": "optional string",
     "package": "optional string",
@@ -32,7 +38,9 @@ Validates input for searching events:
 ```
 
 #### EventReceiverSearchInput
+
 Validates input for searching event receivers:
+
 ```python
 {
     "name": "optional string",
@@ -43,11 +51,13 @@ Validates input for searching event receivers:
 ```
 
 #### EventReceiverGroupSearchInput
+
 Validates input for searching event receiver groups:
+
 ```python
 {
     "name": "optional string",
-    "type": "optional string", 
+    "type": "optional string",
     "version": "optional string",
     "description": "optional string"
 }
@@ -56,7 +66,9 @@ Validates input for searching event receiver groups:
 ### Creation Schemas
 
 #### EventCreateInput
+
 Validates input for creating events (all fields required):
+
 ```python
 {
     "name": "string (min_length=1)",
@@ -72,7 +84,9 @@ Validates input for creating events (all fields required):
 ```
 
 #### EventReceiverCreateInput
+
 Validates input for creating event receivers (all fields required):
+
 ```python
 {
     "name": "string (min_length=1)",
@@ -83,7 +97,9 @@ Validates input for creating event receivers (all fields required):
 ```
 
 #### EventReceiverGroupCreateInput
+
 Validates input for creating event receiver groups (all fields required):
+
 ```python
 {
     "name": "string (min_length=1)",
@@ -97,7 +113,9 @@ Validates input for creating event receiver groups (all fields required):
 ### Fetch Schema
 
 #### FetchInput
+
 Validates input for fetch operations:
+
 ```python
 {
     "id": "string (min_length=1, trimmed)"
@@ -107,15 +125,19 @@ Validates input for fetch operations:
 ## Data Wrappers
 
 ### SearchDataWrapper
+
 Wraps search inputs in a `data` field:
+
 ```python
 {
     "data": EventSearchInput | EventReceiverSearchInput | EventReceiverGroupSearchInput
 }
 ```
 
-### CreateDataWrapper  
+### CreateDataWrapper
+
 Wraps creation inputs in a `data` field:
+
 ```python
 {
     "data": EventCreateInput | EventReceiverCreateInput | EventReceiverGroupCreateInput
@@ -148,8 +170,9 @@ except (ValidationError, ValueError) as e:
 ### Operation Mapping
 
 The system supports these operations:
+
 - `search_events` → SearchDataWrapper
-- `search_receivers` → SearchDataWrapper  
+- `search_receivers` → SearchDataWrapper
 - `search_groups` → SearchDataWrapper
 - `create_event` → CreateDataWrapper
 - `create_receiver` → CreateDataWrapper
@@ -169,7 +192,7 @@ async def search_events(data: dict) -> str:
         validated_data = validate_input("search_events", data)
     except (ValidationError, ValueError) as e:
         return f"Validation error: {str(e)}"
-    
+
     # Process validated_data...
 ```
 
@@ -194,6 +217,7 @@ python test_schemas.py
 ## Error Handling
 
 Validation errors are caught and returned as user-friendly error messages:
+
 - Missing required fields
 - Invalid data types
 - Empty strings where content is required

@@ -42,6 +42,27 @@ from .schemas import (
 logger = logging.getLogger(__name__)
 
 
+def filter_none_values(data: dict) -> dict:
+    """Filter out None values from a dictionary to avoid sending null values to GraphQL"""
+    return {key: value for key, value in data.items() if value is not None}
+
+
+async def handle_http_errors(ctx: Context, e: Exception, operation: str, cfg) -> str:
+    """Handle common HTTP errors and return user-friendly error messages"""
+    if isinstance(e, httpx.ConnectError):
+        await ctx.error(f"Connection failed to {cfg.url}: {e!s}")
+        return f"Connection failed to EPR server at {cfg.url}. Please check if the EPR server is running and accessible. Error: {e!s}"
+    elif isinstance(e, httpx.TimeoutException):
+        await ctx.error(f"Request timeout to {cfg.url}: {e!s}")
+        return f"Request timeout to EPR server at {cfg.url}. Error: {e!s}"
+    elif isinstance(e, httpx.HTTPStatusError):
+        await ctx.error(f"HTTP error from {cfg.url}: {e!s}")
+        return f"HTTP error from EPR server: {e.response.status_code} - {e.response.text}"
+    else:
+        await ctx.error(f"Error in {operation}: {e!s}")
+        return f"Error in {operation}: {e!s}"
+
+
 def run(cfg):
     debug = cfg.debug or os.environ.get("EPR_DEBUG", False)
     if debug:
@@ -102,8 +123,7 @@ def run(cfg):
             await ctx.error(f"Input validation error in fetch_event: {e!s}")
             return f"Input validation error: {e!s}"
         except Exception as e:
-            await ctx.error(f"Error fetching event: {e!s}")
-            return f"Error fetching event: {e!s}"
+            return await handle_http_errors(ctx, e, "fetch_event", cfg)
 
     @mcp.tool(title="Fetch Event Receiver", description="Fetch an event receiver from EPR")
     async def fetch_receiver(
@@ -157,8 +177,7 @@ def run(cfg):
             await ctx.error(f"Input validation error in fetch_receiver: {e!s}")
             return f"Input validation error: {e!s}"
         except Exception as e:
-            await ctx.error(f"Error fetching event receiver: {e!s}")
-            return f"Error fetching event receiver: {e!s}"
+            return await handle_http_errors(ctx, e, "fetch_receiver", cfg)
 
     @mcp.tool(title="Fetch Event Receiver Group", description="Fetch an event receiver group from EPR")
     async def fetch_group(
@@ -214,8 +233,7 @@ def run(cfg):
             await ctx.error(f"Input validation error in fetch_group: {e!s}")
             return f"Input validation error: {e!s}"
         except Exception as e:
-            await ctx.error(f"Error fetching event receiver group: {e!s}")
-            return f"Error fetching event receiver group: {e!s}"
+            return await handle_http_errors(ctx, e, "fetch_group", cfg)
 
     @mcp.tool(title="Search Events", description="Search for events in EPR")
     async def search_events(
@@ -234,6 +252,10 @@ def run(cfg):
             search_params = validated_data["data"]
             await ctx.debug(f"Input validation successful, search params: {search_params}")
 
+            # Filter out None values to avoid sending null parameters to GraphQL
+            filtered_params = filter_none_values(search_params)
+            await ctx.debug(f"Filtered search params (None values removed): {filtered_params}")
+
             fields = [
                 "id",
                 "name",
@@ -247,7 +269,7 @@ def run(cfg):
                 "created_at",
                 "payload",
             ]
-            query = get_search_query(operation="events", params=search_params, fields=fields)
+            query = get_search_query(operation="events", params=filtered_params, fields=fields)
             await ctx.debug(f"Generated GraphQL query: {query.as_dict_query()}")
 
             url = f"{cfg.url}/api/v1/graphql/query"
@@ -269,19 +291,19 @@ def run(cfg):
                 else:
                     return f"Failed to search events: {response.status_code} - {response.text}"
         except ValidationError as e:
-            # Handle both input validation and response validation errors
-            if "response validation failed" in str(e):
+            # Handle input validation errors (from validate_input)
+            await ctx.error(f"Input validation error in search_events: {e!s}")
+            return f"Input validation error: {e!s}"
+        except ValueError as e:
+            # Handle response validation errors (from validate_event_list_response)
+            if "validation failed" in str(e):
                 await ctx.error(f"Response validation error in search_events: {e!s}")
                 return f"Response validation error: {e!s}"
             else:
                 await ctx.error(f"Input validation error in search_events: {e!s}")
                 return f"Input validation error: {e!s}"
-        except ValueError as e:
-            await ctx.error(f"Input validation error in search_events: {e!s}")
-            return f"Input validation error: {e!s}"
         except Exception as e:
-            await ctx.error(f"Error searching events: {e!s}")
-            return f"Error searching events: {e!s}"
+            return await handle_http_errors(ctx, e, "search_events", cfg)
 
     @mcp.tool(title="Search Event Receivers", description="Search for event receivers in EPR")
     async def search_receivers(
@@ -297,8 +319,12 @@ def run(cfg):
             search_params = validated_data["data"]
             await ctx.debug(f"Input validation successful, search params: {search_params}")
 
+            # Filter out None values to avoid sending null parameters to GraphQL
+            filtered_params = filter_none_values(search_params)
+            await ctx.debug(f"Filtered search params (None values removed): {filtered_params}")
+
             fields = ["id", "name", "type", "version", "description", "schema", "fingerprint", "created_at"]
-            query = get_search_query(operation="event_receivers", params=search_params, fields=fields)
+            query = get_search_query(operation="event_receivers", params=filtered_params, fields=fields)
             await ctx.debug(f"Generated GraphQL query: {query.as_dict_query()}")
 
             url = f"{cfg.url}/api/v1/graphql/query"
@@ -320,19 +346,19 @@ def run(cfg):
                 else:
                     return f"Failed to search event receivers: {response.status_code} - {response.text}"
         except ValidationError as e:
-            # Handle both input validation and response validation errors
-            if "response validation failed" in str(e):
+            # Handle input validation errors (from validate_input)
+            await ctx.error(f"Input validation error in search_receivers: {e!s}")
+            return f"Input validation error: {e!s}"
+        except ValueError as e:
+            # Handle response validation errors (from validate_event_receiver_list_response)
+            if "validation failed" in str(e):
                 await ctx.error(f"Response validation error in search_receivers: {e!s}")
                 return f"Response validation error: {e!s}"
             else:
                 await ctx.error(f"Input validation error in search_receivers: {e!s}")
                 return f"Input validation error: {e!s}"
-        except ValueError as e:
-            await ctx.error(f"Input validation error in search_receivers: {e!s}")
-            return f"Input validation error: {e!s}"
         except Exception as e:
-            await ctx.error(f"Error searching event receivers: {e!s}")
-            return f"Error searching event receivers: {e!s}"
+            return await handle_http_errors(ctx, e, "search_receivers", cfg)
 
     @mcp.tool(title="Search Event Receiver Groups", description="Search for event receiver groups in EPR")
     async def search_groups(
@@ -350,6 +376,10 @@ def run(cfg):
             search_params = validated_data["data"]
             await ctx.debug(f"Input validation successful, search params: {search_params}")
 
+            # Filter out None values to avoid sending null parameters to GraphQL
+            filtered_params = filter_none_values(search_params)
+            await ctx.debug(f"Filtered search params (None values removed): {filtered_params}")
+
             fields = [
                 "id",
                 "name",
@@ -362,7 +392,7 @@ def run(cfg):
                 "created_at",
                 "updated_at",
             ]
-            query = get_search_query(operation="event_receiver_groups", params=search_params, fields=fields)
+            query = get_search_query(operation="event_receiver_groups", params=filtered_params, fields=fields)
             await ctx.debug(f"Generated GraphQL query: {query.as_dict_query()}")
 
             url = f"{cfg.url}/api/v1/graphql/query"
@@ -384,19 +414,19 @@ def run(cfg):
                 else:
                     return f"Failed to search event receiver groups: {response.status_code} - {response.text}"
         except ValidationError as e:
-            # Handle both input validation and response validation errors
-            if "response validation failed" in str(e):
+            # Handle input validation errors (from validate_input)
+            await ctx.error(f"Input validation error in search_groups: {e!s}")
+            return f"Input validation error: {e!s}"
+        except ValueError as e:
+            # Handle response validation errors (from validate_event_receiver_group_list_response)
+            if "validation failed" in str(e):
                 await ctx.error(f"Response validation error in search_groups: {e!s}")
                 return f"Response validation error: {e!s}"
             else:
                 await ctx.error(f"Input validation error in search_groups: {e!s}")
                 return f"Input validation error: {e!s}"
-        except ValueError as e:
-            await ctx.error(f"Input validation error in search_groups: {e!s}")
-            return f"Input validation error: {e!s}"
         except Exception as e:
-            await ctx.error(f"Error searching event receiver groups: {e!s}")
-            return f"Error searching event receiver groups: {e!s}"
+            return await handle_http_errors(ctx, e, "search_groups", cfg)
 
     @mcp.tool(title="Create Event", description="Create a new event in EPR")
     async def create_event(
@@ -462,8 +492,7 @@ def run(cfg):
             await ctx.error(f"Input validation error in create_event: {e!s}")
             return f"Input validation error: {e!s}"
         except Exception as e:
-            await ctx.error(f"Error creating event: {e!s}")
-            return f"Error creating event: {e!s}"
+            return await handle_http_errors(ctx, e, "create_event", cfg)
 
     @mcp.tool(title="Create Event Receiver", description="Create a new event receiver in EPR")
     async def create_receiver(
@@ -527,8 +556,7 @@ def run(cfg):
             await ctx.error(f"Input validation error in create_receiver: {e!s}")
             return f"Input validation error: {e!s}"
         except Exception as e:
-            await ctx.error(f"Error creating event receiver: {e!s}")
-            return f"Error creating event receiver: {e!s}"
+            return await handle_http_errors(ctx, e, "create_receiver", cfg)
 
     @mcp.tool(title="Create Event Receiver Group", description="Create a new event receiver group in EPR")
     async def create_group(
@@ -597,8 +625,7 @@ def run(cfg):
             await ctx.error(f"Input validation error in create_group: {e!s}")
             return f"Input validation error: {e!s}"
         except Exception as e:
-            await ctx.error(f"Error creating event receiver group: {e!s}")
-            return f"Error creating event receiver group: {e!s}"
+            return await handle_http_errors(ctx, e, "create_group", cfg)
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(request: Request) -> PlainTextResponse:
