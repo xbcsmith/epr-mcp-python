@@ -475,7 +475,7 @@ def validate_input(operation: str, input_data: Union[str, Dict[str, Any]]) -> Di
     # Sanitize dictionary inputs before validation
     sanitized_data = _sanitize_dict(input_data)
     validated = schema_class(**sanitized_data)
-    return validated.dict()
+    return validated.model_dump()
 
 
 def get_validation_schema(operation: str) -> BaseModel:
