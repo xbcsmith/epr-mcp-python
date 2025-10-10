@@ -2,7 +2,6 @@ services:
   epr-mcp-server:
     build: .
     container_name: epr-mcp-server
-    command: 
     ports:
       - "8000:8000"
     environment:
