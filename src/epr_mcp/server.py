@@ -12,11 +12,6 @@ from typing import Annotated
 
 import yaml
 
-try:
-    import yaml
-except ImportError:
-    yaml = None
-
 import httpx
 from fastmcp import Context, FastMCP
 from pydantic import Field, ValidationError
