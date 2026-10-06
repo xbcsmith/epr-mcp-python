@@ -46,6 +46,22 @@ def create_client(cfg: Config) -> httpx2.AsyncClient:
 
 
 def get_operation(name: str, operation: str) -> str:
+    """Look up a GraphQL type or field name.
+
+    Args:
+        name: Kind of lookup: "search", "mutation", "operation", or "create".
+        operation: The operation inside that kind, for example "events" or "create_event".
+
+    Returns:
+        The GraphQL input type or field name.
+
+    Raises:
+        KeyError: If the name or operation is not known.
+
+    Examples:
+        >>> get_operation("operation", "events")
+        'event'
+    """
     operation_map = {
         "search": {
             "events": "FindEventInput!",

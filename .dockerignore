@@ -1,0 +1,15 @@
+# Keep the build context small: the image only needs the wheel in dist/ and the
+# files the Dockerfile copies.
+.git
+.venv
+.pytest_cache
+.ruff_cache
+.tox
+build
+src/*.egg-info
+**/__pycache__
+tests
+docs
+demos
+epr_reports
+.env

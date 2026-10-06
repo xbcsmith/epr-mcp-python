@@ -53,6 +53,16 @@ class GraphQLError(EPRError):
 
 
 def debug_except_hook(type, value, tb):
+    """Print an uncaught exception and open a post-mortem debugger.
+
+    Installed as ``sys.excepthook`` when debugging is on. Do not use it with the stdio
+    transport: the debugger reads from stdin, which carries the MCP protocol.
+
+    Args:
+        type: The exception class.
+        value: The exception instance.
+        tb: The traceback.
+    """
     print(f"epr python hates {type.__name__}")
     print(str(type))
 

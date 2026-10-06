@@ -13,4 +13,10 @@ __version_info__ = tuple(__version__.split("."))
 
 
 def info():
+    """Return the package name and version as two lines of text.
+
+    Examples:
+        >>> info().splitlines()[0]
+        'epr-mcp'
+    """
     return f"{__title__}\n{__version__}"

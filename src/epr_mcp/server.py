@@ -661,6 +661,7 @@ def create_server(cfg: Config) -> FastMCP:
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(request: Request) -> PlainTextResponse:
+        """Answer the health check used by Docker and load balancers."""
         return PlainTextResponse("OK")
 
     @mcp.custom_route("/openapi.yaml", methods=["GET"])

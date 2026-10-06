@@ -8,14 +8,18 @@ from typing import Any, Dict, List
 
 
 class ModelType(Enum):
+    """The kinds of EPR records."""
+
     EVENT = "Event"
     RECEIVER = "EventReceiver"
     GROUP = "EventReceiverGroup"
 
     def lower(self):
+        """Return the record name in lower case."""
         return self.value.lower()
 
     def lower_plural(self):
+        """Return the record name in lower case and plural."""
         return self.lower() + "s"
 
 
@@ -109,5 +113,7 @@ class Message(Model):
 
 @dataclass
 class GraphQLQuery(Model):
+    """A GraphQL query and its variables, ready to post to EPR."""
+
     query: str
     variables: Dict[str, Any] = field(default_factory=dict)

@@ -28,17 +28,17 @@ Phase 0):
 
 ### Existing Infrastructure
 
-| Item                                                     | State                                                                                                                                                                                                                                                                                                                                                                        |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [pyproject.toml](../../pyproject.toml)                   | Unpinned `fastmcp`, `httpx`, `pydantic`, `starlette`, `PyYAML`; `requires-python >= 3.12`                                                                                                                                                                                                                                                                                    |
-| [server.py](../../src/epr_mcp/server.py)                 | `run(cfg)` registers 9 tools (fetch/search/create for events, receivers, groups) and 4 `custom_route` endpoints (`/health`, `/openapi.yaml`, `/openapi.json`, `/docs`); 9 `httpx.AsyncClient` call sites; `handle_http_errors` checks `httpx.ConnectError`, `httpx.TimeoutException`, `httpx.HTTPStatusError`; ends with `asyncio.run(mcp.run_async(transport="http", ...))` |
-| [openapi_server.py](../../src/epr_mcp/openapi_server.py) | `EPROpenAPIHandler` (6 `httpx.AsyncClient` call sites) plus `create_openapi_server` using `FastMCPOpenAPI`, `MCPType`, `RouteMap` imported from `fastmcp.server.openapi`; not wired into [main.py](../../src/epr_mcp/main.py)                                                                                                                                                |
-| [main.py](../../src/epr_mcp/main.py)                     | argparse dispatch; `start` calls `server.run(cfg)`; always binds `0.0.0.0:8000`                                                                                                                                                                                                                                                                                              |
-| Tests                                                    | `tests/unit/test_server.py` covers only `filter_none_values`; `tests/test_smoke.py` imports modules; `tests/test_base.py` empty; `tests/functional/` empty                                                                                                                                                                                                                   |
-| Docker                                                   | [Dockerfile](../../Dockerfile) installs prebuilt wheel `dist/epr_mcp-0.1.0-py2.py3-none-any.whl` on UBI8 Python 3.12; [docker-compose.yaml](../../docker-compose.yaml) healthchecks `/health`                                                                                                                                                                                |
-| [docs/tutorials/](../tutorials/)                         | `00-intro` to `05-mcp-misc`; `README.md` is empty; tutorials 01 and 05 install `mcp[cli] mcp httpx` and import `mcp.server.fastmcp` (the official SDK), not the `fastmcp` package; 04 repeats the 9 `httpx.AsyncClient` snippets; one link points to "FastMCP 2.0"                                                                                                           |
-| [demos/](../../demos/)                                   | `generate_epr_events.py` uses `httpx.Client` and `ulid`; `openapi_demo.py` is a print-only script; `requirements.txt` lists `httpx>=0.23.0` and `ulid>=1.1.0`; no demo has a script                                                                                                                                                                                          |
-| `temp/`                                                  | Scratch `server.py` (SDK-style FastMCP) and `notes.md` (curl commands to seed EPR receivers)                                                                                                                                                                                                                                                                                 |
+| Item                                     | State                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [pyproject.toml](../../pyproject.toml)   | Unpinned `fastmcp`, `httpx`, `pydantic`, `starlette`, `PyYAML`; `requires-python >= 3.12`                                                                                                                                                                                                                                                                                    |
+| [server.py](../../src/epr_mcp/server.py) | `run(cfg)` registers 9 tools (fetch/search/create for events, receivers, groups) and 4 `custom_route` endpoints (`/health`, `/openapi.yaml`, `/openapi.json`, `/docs`); 9 `httpx.AsyncClient` call sites; `handle_http_errors` checks `httpx.ConnectError`, `httpx.TimeoutException`, `httpx.HTTPStatusError`; ends with `asyncio.run(mcp.run_async(transport="http", ...))` |
+| `openapi_server.py`                      | `EPROpenAPIHandler` (6 `httpx.AsyncClient` call sites) plus `create_openapi_server` using `FastMCPOpenAPI`, `MCPType`, `RouteMap` imported from `fastmcp.server.openapi`; not wired into [main.py](../../src/epr_mcp/main.py)                                                                                                                                                |
+| [main.py](../../src/epr_mcp/main.py)     | argparse dispatch; `start` calls `server.run(cfg)`; always binds `0.0.0.0:8000`                                                                                                                                                                                                                                                                                              |
+| Tests                                    | `tests/unit/test_server.py` covers only `filter_none_values`; `tests/test_smoke.py` imports modules; `tests/test_base.py` empty; `tests/functional/` empty                                                                                                                                                                                                                   |
+| Docker                                   | [Dockerfile](../../Dockerfile) installs prebuilt wheel `dist/epr_mcp-0.1.0-py2.py3-none-any.whl` on UBI8 Python 3.12; [docker-compose.yaml](../../docker-compose.yaml) healthchecks `/health`                                                                                                                                                                                |
+| [docs/tutorials/](../tutorials/)         | `00-intro` to `05-mcp-misc`; `README.md` is empty; tutorials 01 and 05 install `mcp[cli] mcp httpx` and import `mcp.server.fastmcp` (the official SDK), not the `fastmcp` package; 04 repeats the 9 `httpx.AsyncClient` snippets; one link points to "FastMCP 2.0"                                                                                                           |
+| [demos/](../../demos/)                   | `generate_epr_events.py` uses `httpx.Client` and `ulid`; `openapi_demo.py` is a print-only script; `requirements.txt` lists `httpx>=0.23.0` and `ulid>=1.1.0`; no demo has a script                                                                                                                                                                                          |
+| `temp/`                                  | Scratch `server.py` (SDK-style FastMCP) and `notes.md` (curl commands to seed EPR receivers)                                                                                                                                                                                                                                                                                 |
 
 ### Identified Issues
 
@@ -208,10 +208,10 @@ clean venv pulls `httpx2` and no direct `httpx` dependency of this project.
 #### 2.2 Integrate Feature
 
 - `openapi_server.py` is already deleted (Phase 1); remove every remaining
-  reference: imports, `docs/openapi_implementation.md` (rewrite to describe only
-  the `/openapi.yaml`, `/openapi.json`, and `/docs` routes that remain in
-  `server.py`), the demos, and `tests/test_smoke.py` if referenced. Keep
-  `openapi.yaml`, which `server.py` serves.
+  reference: imports, `docs/reference/openapi_implementation.md` (rewrite to
+  describe only the `/openapi.yaml`, `/openapi.json`, and `/docs` routes that
+  remain in `server.py`), the demos, and `tests/test_smoke.py` if referenced.
+  Keep `openapi.yaml`, which `server.py` serves.
 - Add a `--transport` option to `main.py start` with values `stdio` and `http`
   (default `http` to keep Docker behavior). The stdio path calls the framework's
   stdio run method; logging already goes to stderr, and no code path may print
@@ -404,7 +404,7 @@ run a demo using only its script.
 
 - Recreate four of the docs deleted from the working tree under AGENTS.md Rule 1
   names (lowercase, underscores; only `README.md` may be uppercase):
-  `docs/docker_compose.md`, `docs/openapi_implementation.md`,
+  `docs/docker_compose.md`, `docs/reference/openapi_implementation.md`,
   `docs/schema_validation.md`, and `docs/README.md`. Take the starting content
   from `git show HEAD:docs/<OLD_NAME>`. `docs/docker_reference.md` and
   `docs/troubleshooting.md` stay deleted (decision); remove their rows from the
@@ -443,9 +443,9 @@ and markdownlint plus prettier on every changed `.md` file.
 
 #### 5.5 Deliverables
 
-- [ ] All docs reference FastMCP 4 and `httpx2`
-- [ ] Implementation doc written
-- [ ] Post-merge release checklist (2.0.0 bump, wheel, tag, image) written in
+- [x] All docs reference FastMCP 4 and `httpx2`
+- [x] Implementation doc written
+- [x] Post-merge release checklist (2.0.0 bump, wheel, tag, image) written in
       the implementation doc
 
 #### 5.6 Success Criteria

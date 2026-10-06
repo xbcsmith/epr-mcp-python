@@ -152,6 +152,14 @@ class EventCreateInput(BaseModel):
     @field_validator("payload", mode="before")
     @classmethod
     def validate_payload(cls, v):
+        """Require the payload to be a dictionary.
+
+        Args:
+            v: The value to check.
+
+        Returns:
+            The value, unchanged.
+        """
         if not isinstance(v, dict):
             raise ValidationError("Payload must be a dictionary")
         return _sanitize_dict(v)
@@ -223,6 +231,14 @@ class EventReceiverGroupCreateInput(BaseModel):
     @field_validator("event_receiver_ids")
     @classmethod
     def validate_event_receiver_ids(cls, v):
+        """Strip each receiver ID and require it to be a 26 character ULID.
+
+        Args:
+            v: The list of receiver IDs.
+
+        Returns:
+            The cleaned list of IDs.
+        """
         if not v:  # Check if list is empty
             raise ValidationError("Event receiver IDs list cannot be empty")
 
@@ -273,6 +289,14 @@ class FetchInput(BaseModel):
     @field_validator("id")
     @classmethod
     def validate_id(cls, v):
+        """Strip the ID and reject an empty one.
+
+        Args:
+            v: The ID to check.
+
+        Returns:
+            The ID without surrounding whitespace.
+        """
         if not v or not v.strip():
             raise ValidationError("ID cannot be empty")
         return v.strip()
@@ -310,6 +334,14 @@ class EventResponse(BaseModel):
     @field_validator("payload", "event_receiver")
     @classmethod
     def validate_dict_fields(cls, v):
+        """Turn a missing value into an empty dictionary and reject other non-dictionaries.
+
+        Args:
+            v: The value to check.
+
+        Returns:
+            A dictionary.
+        """
         if v is None:
             return {}
         if not isinstance(v, dict):
@@ -342,6 +374,14 @@ class EventReceiverResponse(BaseModel):
     @field_validator("schema_data")
     @classmethod
     def validate_schema_field(cls, v):
+        """Turn a missing schema into an empty dictionary and reject other non-dictionaries.
+
+        Args:
+            v: The value to check.
+
+        Returns:
+            A dictionary.
+        """
         if v is None:
             return {}
         if not isinstance(v, dict):
@@ -376,6 +416,14 @@ class EventReceiverGroupResponse(BaseModel):
     @field_validator("event_receiver_ids")
     @classmethod
     def validate_event_receiver_ids(cls, v):
+        """Strip each receiver ID and require it to be a 26 character ULID.
+
+        Args:
+            v: The list of receiver IDs.
+
+        Returns:
+            The cleaned list of IDs.
+        """
         if v is None:
             return []
         if not isinstance(v, list):

@@ -1,8 +1,45 @@
 # FastMCP 4 and httpx2 Migration Implementation
 
-This document records what was found and done during the migration. It is filled
-in phase by phase; see
-[the implementation plan](./fastmcp4_httpx2_migration_implementation_plan.md).
+This document records what was found and done while migrating `epr-mcp` from
+FastMCP 2.x and `httpx` to FastMCP 4 and `httpx2`, rewriting the tutorials and
+demos, and fixing what running against a real EPR exposed. It was filled in
+phase by phase; the plan it followed is
+[fastmcp4_httpx2_migration_implementation_plan.md](./fastmcp4_httpx2_migration_implementation_plan.md).
+
+## Overview
+
+| Area         | Result                                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| Dependencies | `fastmcp>=4.0,<5`, `httpx2>=2.13`, `pydantic>=2.12`, `starlette>=1.0`; legacy `httpx` is gone                                    |
+| Server       | `create_server(cfg)` plus `run(cfg)`; `stdio` and `http` transports; flat tool arguments; nine tools verified against a live EPR |
+| Packaging    | `py3-none-any` wheel that includes `openapi.yaml`; SPDX license metadata; Dockerfile installs the wheel by glob                  |
+| Workshop     | Eight modules, four checkpoints, an EPR-only compose file, a preflight, and a terminal client                                    |
+| Demos        | Three demos, three presenter scripts, and `run_all.sh`                                                                           |
+| Quality      | 255 tests pass (2 functional tests skipped by default), 88% coverage, `ruff` clean, all markdown lint-clean                      |
+
+The release is version 2.0.0 because behavior changes (see the 2.0 notes in the
+README); the version bump itself is a post-merge step (see the release
+checklist).
+
+## Components
+
+| Path                     | Role                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| `src/epr_mcp/server.py`  | `create_server`, `run`, the nine tools, and the HTTP routes                                |
+| `src/epr_mcp/common.py`  | `create_client`: the httpx2 client with the optional bearer token, and the GraphQL helpers |
+| `src/epr_mcp/config.py`  | `Config` with `url`, `token`, `debug`, `transport`, `host`, `port`                         |
+| `src/epr_mcp/main.py`    | The `eprmcp` command: `--transport`, `--host`, `--port`, token and URL                     |
+| `src/epr_mcp/schemas.py` | Input and response validation (unknown fields rejected)                                    |
+| `docs/tutorials/`        | The workshop and its code, EPR compose file, and preflight                                 |
+| `demos/`                 | Demos, presenter scripts, and `scripts/run_all.sh`                                         |
+| `tests/`                 | Unit, tutorial, demo, and functional tests                                                 |
+
+## Implementation Details
+
+The details follow, by phase: what the research found (Phase 0), the httpx2 swap
+(Phase 1), the FastMCP 4 changes, flat arguments, and packaging (Phase 2), the
+workshop and the real-EPR fixes (Phase 3), the demos (Phase 4), and the
+documentation and release work (Phase 5).
 
 ## Phase 0: Migration Findings
 
@@ -409,3 +446,126 @@ Unit tests were added for items 2 to 5 (`TestAgainstRealEprBehavior` and
   listed path exists. Correcting the document is outside this migration.
 - The generator does not post its events to groups, and `--write-to-disk` writes
   to the current directory.
+
+## Phase 5: Documentation, Infrastructure, and Release
+
+### Phase 5 changes
+
+- Root `README.md` rewritten. The old one described tools that do not exist
+  (`fetchEvent` and friends "generated from the OpenAPI specification",
+  `healthCheck`), a `mcp.call_tool` API, Docker-launched editor configurations,
+  and a `/health` check against EPR; it now covers install and run, both
+  transports, the options and environment table, the nine tools with their flat
+  arguments, the HTTP endpoints, editor configuration, Docker, development, an
+  "Upgrading to 2.0" section, and troubleshooting.
+- Recreated under AGENTS.md Rule 1 names, written fresh against the current code
+  rather than copied (the old text described removed code and used emojis):
+  `docs/README.md`, `docs/how-tos/docker_compose.md`,
+  `docs/reference/openapi_implementation.md`, and
+  `docs/reference/schema_validation.md`. `docs/docker_reference.md` and
+  `docs/troubleshooting.md` stay deleted, as decided; the README and workshop
+  module 07 hold the troubleshooting material.
+- `.env.example`: documents `MCP_TRANSPORT`, `MCP_HOST`, and `MCP_PORT`, and
+  says that Compose fixes the container to `0.0.0.0:8000` over `http`, so they
+  do not change a Compose deployment.
+- `docker-compose.yaml`: `EPR_TOKEN=${EPR_TOKEN:-}` so an unset token no longer
+  prints a warning.
+- `.dockerignore` added so the build context excludes `.git`, `.venv`, `tests`,
+  `docs`, and `demos`.
+- `pyproject.toml`: the license is now the SPDX expression `Apache-2.0` with
+  `license-files`, the deprecated license classifier is gone, and setuptools
+  `>=77` is required. The build had warned that `project.license` as a table
+  stops being supported on 2027-02-18.
+- Docstrings (with Args, Returns, and an example where useful) were added to the
+  15 public functions and classes that lacked them, and the examples run as
+  doctests (`pytest --doctest-modules --import-mode=importlib src/epr_mcp`).
+
+### Phase 5 verification
+
+- `make wheel` in a clean copy builds without warnings; the wheel contains
+  `openapi.yaml` and the license, and its metadata lists the new requirements.
+- The Docker image built from that wheel through `docker compose build` starts,
+  reports `healthy`, serves `/health` and `/openapi.yaml`, and logs
+  `Transport: http` and `EPR Token configured: True` when `EPR_TOKEN` is set.
+- Every relative link in the repository's markdown resolves.
+- A search finds no `mcp.server.fastmcp`, legacy `httpx` import, FastMCP 2
+  reference, all-caps documentation name, or `ulid-py` outside this directory,
+  the tutorial's migration notes, and the guard tests that name them.
+- `make tests` runs tox, which creates fresh environments and downloads
+  packages; it was not run. The same checks were run directly (see below).
+
+## Test suite
+
+| Suite                                                                    | Covers                                                                                         |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `tests/unit/test_server_tools.py`                                        | All nine tools through an in-memory client with a mocked EPR, including the real-EPR behaviors |
+| `tests/unit/test_server_routes.py`, `test_server_run.py`, `test_main.py` | HTTP routes, transport selection, command line and environment                                 |
+| `tests/unit/test_schemas.py`, `test_common.py`, `test_http_errors.py`    | Validation, the client factory, httpx2 error handling                                          |
+| `tests/tutorials/test_tutorial_code.py`                                  | Every workshop checkpoint, configs, naming, and stale references                               |
+| `tests/demos/test_demos.py`                                              | The three demos and `run_all.sh`                                                               |
+| `tests/functional/test_transports.py`                                    | The real process over stdio and over HTTP (`EPR_MCP_FUNCTIONAL=1`)                             |
+
+Final gate, run from the repository root:
+
+```bash
+ruff check src/ tests/ demos/ docs/tutorials/code
+ruff format --check src/ tests/ demos/ docs/tutorials/code
+pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+EPR_MCP_FUNCTIONAL=1 pytest tests/functional
+pytest --doctest-modules --import-mode=importlib src/epr_mcp
+markdownlint --config .markdownlint.json <changed files>
+prettier --check --parser markdown --prose-wrap always <changed files>
+```
+
+## Examples
+
+Start the server for an editor, or as a service:
+
+```bash
+uv run eprmcp start --transport stdio --url http://localhost:8042
+uv run eprmcp start --transport http --host 127.0.0.1 --port 8000
+```
+
+Call a tool with flat arguments from Python:
+
+```python
+async with Client("http://127.0.0.1:8000/mcp") as client:
+    await client.call_tool("search_events", {"data": {"name": "checkout-service"}})
+```
+
+Rehearse the demos against a live EPR:
+
+```bash
+(cd docs/tutorials/code && docker compose up -d --build)
+demos/scripts/run_all.sh
+```
+
+## Release checklist (after the merge)
+
+The version stays `0.1.0` in the pull request. After it merges, the maintainer:
+
+1. Bumps the version to `2.0.0` in `pyproject.toml` (`constants.py` reads it
+   from the installed package metadata, so no second edit is needed).
+2. Runs the quality gate above once more on the merge commit.
+3. Runs `make wheel` and checks `dist/epr_mcp-2.0.0-py3-none-any.whl`: it should
+   contain `epr_mcp/openapi.yaml` and no `openapi_server.py`.
+4. Runs `make docker-image`, then starts the image and checks `/health`.
+5. Updates the version in `docs/tutorials/code/.vscode/mcp.json` examples only
+   if they pin one (they do not today) and tags `v2.0.0`.
+6. Publishes with `make release` (the tox `release` environment uploads to the
+   package index) and pushes the image to the registry in use.
+7. Announces the breaking changes using the "Upgrading to 2.0" section of the
+   README.
+
+Known follow-ups that are outside this migration:
+
+- `src/epr_mcp/openapi.yaml` calls EPR the "Event Processing Registry" and lists
+  paths the real EPR does not have.
+- The tools return errors as text rather than as MCP error results; the workshop
+  server shows the `ToolError` alternative.
+- The Prometheus and Grafana profiles in `docker-compose.yaml` expect `/metrics`
+  and provisioning files that do not exist.
+- `schemas.py` raises `pydantic.ValidationError` directly in a few validators,
+  which cannot be constructed that way.
+- The workshop agenda has not been dry-run with a new attendee, and the VS Code,
+  Claude Desktop, and Inspector 2.9.0 screens have not been opened.

@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class CmdLine(object):
+    """Command line dispatcher: the first argument names the method to run."""
+
     def __init__(self):
         parser = argparse.ArgumentParser(
             description="EPR MCP Server",
@@ -114,6 +116,7 @@ class CmdLine(object):
 
 
 def main():
+    """Entry point for the ``eprmcp`` command."""
     CmdLine()
 
 
