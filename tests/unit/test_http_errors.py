@@ -1,6 +1,6 @@
 """Unit tests for HTTP error handling and the httpx2 migration."""
 
-import asyncio
+import logging
 import re
 from pathlib import Path
 
@@ -11,53 +11,41 @@ from epr_mcp.config import Config
 from epr_mcp.server import handle_http_errors
 
 
-class FakeContext:
-    """Minimal stand-in for the FastMCP context that records error calls."""
-
-    def __init__(self):
-        self.errors = []
-
-    async def error(self, message):
-        self.errors.append(message)
-
-
 @pytest.fixture
 def cfg():
     return Config(url="http://epr.test:8042", token=None)
 
 
-def run_handler(error, cfg, operation="fetch_event"):
-    ctx = FakeContext()
-    message = asyncio.run(handle_http_errors(ctx, error, operation, cfg))
-    return ctx, message
-
-
 class TestHandleHttpErrors:
     """Test handle_http_errors with httpx2 exception types."""
 
-    def test_connect_error(self, cfg):
-        ctx, message = run_handler(httpx2.ConnectError("refused"), cfg)
+    def test_connect_error(self, cfg, caplog):
+        with caplog.at_level(logging.ERROR, logger="epr_mcp.server"):
+            message = handle_http_errors(httpx2.ConnectError("refused"), "fetch_event", cfg)
         assert "Connection failed to EPR server at http://epr.test:8042" in message
         assert "refused" in message
-        assert len(ctx.errors) == 1
+        assert "Connection failed to http://epr.test:8042" in caplog.text
 
-    def test_timeout_error(self, cfg):
-        ctx, message = run_handler(httpx2.ReadTimeout("too slow"), cfg)
+    def test_timeout_error(self, cfg, caplog):
+        with caplog.at_level(logging.ERROR, logger="epr_mcp.server"):
+            message = handle_http_errors(httpx2.ReadTimeout("too slow"), "fetch_event", cfg)
         assert message.startswith("Request timeout to EPR server at http://epr.test:8042")
-        assert len(ctx.errors) == 1
+        assert "Request timeout" in caplog.text
 
-    def test_http_status_error(self, cfg):
+    def test_http_status_error(self, cfg, caplog):
         request = httpx2.Request("GET", "http://epr.test:8042/api/v1/events/1")
         response = httpx2.Response(500, text="boom", request=request)
         error = httpx2.HTTPStatusError("server error", request=request, response=response)
-        ctx, message = run_handler(error, cfg)
+        with caplog.at_level(logging.ERROR, logger="epr_mcp.server"):
+            message = handle_http_errors(error, "fetch_event", cfg)
         assert message == "HTTP error from EPR server: 500 - boom"
-        assert len(ctx.errors) == 1
+        assert "HTTP error from" in caplog.text
 
-    def test_generic_error(self, cfg):
-        ctx, message = run_handler(RuntimeError("unexpected"), cfg, operation="create_event")
+    def test_generic_error(self, cfg, caplog):
+        with caplog.at_level(logging.ERROR, logger="epr_mcp.server"):
+            message = handle_http_errors(RuntimeError("unexpected"), "create_event", cfg)
         assert message == "Error in create_event: unexpected"
-        assert len(ctx.errors) == 1
+        assert "Error in create_event" in caplog.text
 
 
 class TestNoLegacyHttpx:

@@ -4,6 +4,8 @@
 
 from dataclasses import asdict, dataclass
 
+TRANSPORTS = ("http", "stdio")
+
 
 @dataclass
 class Config:
@@ -12,6 +14,9 @@ class Config:
     url: str
     token: str | None = None
     debug: bool = False
+    transport: str = "http"
+    host: str = "0.0.0.0"
+    port: int = 8000
 
     def as_dict(self):
         """Get a dictionary containing object properties"""

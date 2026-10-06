@@ -22,7 +22,7 @@ release: ; $(info $(M) running tox...) @ ## Run tox
 
 .PHONY: wheel
 wheel: ; $(info $(M) creating sdist bdist_wheel...) @ ## Create an sdist bdist_wheel
-	$Q pip install --upgrade build && python -m build --sdist --wheel
+	$Q rm -rf build dist && pip install --upgrade build && python -m build --sdist --wheel
 
 .PHONY: docker-image
 docker-image: wheel; $(info $(M) building docker image...) @ ## Build the docker image

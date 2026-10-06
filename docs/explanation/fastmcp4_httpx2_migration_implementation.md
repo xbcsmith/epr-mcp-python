@@ -134,3 +134,110 @@ The two baseline `ruff` errors are fixed.
 `ruff check src/ tests/` passes, 134 tests pass (126 before), and no legacy
 `httpx` import remains in `src/` or `tests/`. Coverage is 43% (was 40%);
 `server.py` coverage arrives with the Phase 2 in-memory-client tests.
+
+## Phase 2: FastMCP 4 API Migration
+
+### Phase 2 changes
+
+- `src/epr_mcp/server.py`:
+  - `run(cfg)` is split into `create_server(cfg)` (builds the `FastMCP` instance
+    with all tools and routes, binds nothing) and `run(cfg)` (picks the
+    transport and starts it).
+  - `FastMCP(name="EPR MCP Server", version="1.0.0")` uses keyword arguments;
+    the server previously reported `"1.0.0"` as its instructions.
+  - All `ctx.debug` and `ctx.error` calls are now `logger.debug` and
+    `logger.error`, and the unused `ctx: Context` parameters are removed from
+    the tools. `handle_http_errors(e, operation, cfg)` is a plain function.
+  - `run` supports `stdio` (banner off, so nothing but protocol traffic is
+    written to stdout) and `http` with the configured host and port, using
+    `mcp.run(...)` instead of `asyncio.run(mcp.run_async(...))`. It rejects any
+    other transport with `ValueError`, and no longer logs the token (it logs
+    only whether one is configured).
+- `src/epr_mcp/config.py`: `Config` gains `transport`, `host`, and `port`;
+  `TRANSPORTS` lists the valid transports.
+- `src/epr_mcp/main.py`: new `--transport`, `--host`, and `--port` options with
+  `MCP_TRANSPORT`, `MCP_HOST`, and `MCP_PORT` as defaults. The token is read
+  from `EPR_API_TOKEN` or `EPR_TOKEN`.
+- `pyproject.toml`: `openapi.yaml` is package data; the build backend is the
+  standard `setuptools.build_meta`; the `universal` wheel setting is removed so
+  the wheel is tagged `py3-none-any`; `pytest-asyncio` and `pytest-cov` are in
+  the test extra and tox deps.
+- `Dockerfile`: installs `dist/epr_mcp-*-py3-none-any.whl` instead of a
+  hard-coded `0.1.0` file name. `Makefile`: `make wheel` removes `build/` and
+  `dist/` first, because a stale `build/lib` previously leaked deleted modules
+  into the wheel.
+
+### Phase 2 behavior changes
+
+- New `--transport stdio|http`, `--host`, and `--port` options and matching
+  environment variables. Defaults match the old behavior (`http`, `0.0.0.0`,
+  `8000`).
+- `EPR_TOKEN`, which `docker-compose.yaml` and `.env.example` set, now reaches
+  the server. Before, only `EPR_API_TOKEN` was read, so the token never arrived
+  in Docker.
+- Tool diagnostics go to the server log, not to MCP client log notifications.
+- `/openapi.yaml` and `/openapi.json` work from the installed wheel; the old
+  wheel omitted the spec.
+
+### Testing
+
+203 tests pass and 2 functional tests are skipped by default; coverage is 87%
+(`server.py` 82%, up from 5%). New files:
+
+- `tests/unit/test_server_tools.py`: in-memory `Client` against `create_server`,
+  with EPR replaced by `httpx2.MockTransport`; covers tool registration and
+  schemas, success, empty, non-2xx, validation failure, connect error, and
+  timeout for all 9 tools, plus the bearer header.
+- `tests/unit/test_server_routes.py`: the four HTTP routes through the Starlette
+  `TestClient`, and a check that the spec ships as package data.
+- `tests/unit/test_server_run.py`: transport selection, host and port, token not
+  logged, debug flag.
+- `tests/unit/test_main.py`: command line and environment handling.
+- `tests/functional/test_transports.py`: starts the real process over stdio and
+  over HTTP and lists the tools. Run with `EPR_MCP_FUNCTIONAL=1`; both pass.
+
+### Verified against a real build
+
+A wheel built from a clean copy of the tree contains `openapi.yaml` and no
+`openapi_server.py`. The image built from it reports `healthy`, serves
+`/health`, `/openapi.yaml`, and `/openapi.json` with 200, lists 9 tools over
+HTTP through a FastMCP 4 client, returns the "Connection failed" message with no
+EPR running, and has no legacy `httpx` installed.
+
+### Not yet verified
+
+- A `fetch_event` call against a running EPR, `docker compose up`, and the MCP
+  Inspector. They need a running EPR, which Phase 3 sets up; they remain part of
+  the Phase 2 success criteria until then.
+- `uv run` launching the stdio server from VS Code (Phase 3).
+
+### Flat tool arguments
+
+The search and create tools used to require their argument wrapped one level
+deeper (`search_events` took `{"data": {"data": {"name": ...}}}`, `create_event`
+took `{"event_data": {"data": {...}}}`), although the tool descriptions implied
+flat input, so a normal MCP client got "Field required". This is fixed:
+
+- `server.py` adds the `data` wrapper internally before `validate_input`, so
+  tools take flat input: `search_events` takes `{"data": {"name": "foo"}}` and
+  `create_event` takes `{"event_data": {...fields...}}`. The tool parameter
+  names and the JSON schemas are unchanged.
+- The six search and create input models in `schemas.py` now forbid unknown
+  keys. Without this, a caller still using the old wrapped shape would have its
+  criteria silently dropped and run an unfiltered search that returns every
+  record. It now gets an input validation error and no request is sent.
+- The `search_groups` description no longer mentions an `enabled` criterion,
+  which the model never supported; sending it is now rejected.
+- Tests: all tool tests use flat input; new `TestFlatArguments` covers the
+  rejection of the old wrapped shape and of unknown criteria for every search
+  and create tool, and `test_schemas.py` covers the unknown-key rejection.
+  Totals: 215 tests pass, 2 functional tests skipped by default, coverage 88%.
+
+This is a breaking change for any client that sent the old wrapped shape; list
+it in the 2.0 notes.
+
+### Existing problem found, left unchanged
+
+`schemas.py` calls `raise ValidationError("...")` with the Pydantic class, which
+cannot be constructed that way; those branches would fail with a `TypeError`
+instead of a validation message.

@@ -253,12 +253,12 @@ clean venv pulls `httpx2` and no direct `httpx` dependency of this project.
 
 #### 2.5 Deliverables
 
-- [ ] `create_server` / `run` split with tests
-- [ ] `openapi_server.py` deleted with all references removed
-- [ ] `--transport stdio|http` option with tests
-- [ ] Host and port configurable
-- [ ] Dockerfile builds and container passes `/health` healthcheck
-- [ ] Coverage >= 80% over `src/`
+- [x] `create_server` / `run` split with tests
+- [x] `openapi_server.py` deleted with all references removed
+- [x] `--transport stdio|http` option with tests
+- [x] Host and port configurable
+- [x] Dockerfile builds and container passes `/health` healthcheck
+- [x] Coverage >= 80% over `src/`
 
 #### 2.6 Success Criteria
 
@@ -418,7 +418,8 @@ run a demo using only its script.
 
 - Add a short "Upgrading to 2.0" section to the root README for users of the
   package, listing breaking changes: FastMCP 4, `httpx2`, token now sent on all
-  requests, `openapi_server` removed, new `--transport` option.
+  requests, `openapi_server` removed, new `--transport` option, search and
+  create tools take flat arguments (the old wrapped shape is rejected).
 - Update the Makefile `lint` target and tox `check`/`format` to include
   `demos/`; confirm `make tests`, `make wheel`, `make docker-image` work.
 

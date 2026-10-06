@@ -51,7 +51,7 @@ class CmdLine(object):
             "--token",
             dest="epr_api_token",
             action="store",
-            default=os.environ.get("EPR_API_TOKEN"),
+            default=os.environ.get("EPR_API_TOKEN") or os.environ.get("EPR_TOKEN"),
             help="EPR Access Token",
         )
         parser.add_argument(
@@ -60,6 +60,29 @@ class CmdLine(object):
             action="store",
             default=os.environ.get("EPR_URL", "http://localhost:8042"),
             help="EPR Server URL",
+        )
+        parser.add_argument(
+            "--transport",
+            dest="transport",
+            action="store",
+            choices=config.TRANSPORTS,
+            default=os.environ.get("MCP_TRANSPORT", "http"),
+            help="MCP transport: http (default) or stdio",
+        )
+        parser.add_argument(
+            "--host",
+            dest="host",
+            action="store",
+            default=os.environ.get("MCP_HOST", "0.0.0.0"),
+            help="Host to bind for the http transport",
+        )
+        parser.add_argument(
+            "--port",
+            dest="port",
+            action="store",
+            type=int,
+            default=int(os.environ.get("MCP_PORT", "8000")),
+            help="Port to bind for the http transport",
         )
         parser.add_argument(
             "--debug",
@@ -72,9 +95,14 @@ class CmdLine(object):
         args = vars(parser.parse_args(sys.argv[2:]))
         url = args["epr_url"]
         token = args["epr_api_token"]
-        cfg = config.Config(url=url, token=token)
-
-        cfg.debug = args["debug"]
+        cfg = config.Config(
+            url=url,
+            token=token,
+            debug=args["debug"],
+            transport=args["transport"],
+            host=args["host"],
+            port=args["port"],
+        )
 
         return server.run(cfg)
 

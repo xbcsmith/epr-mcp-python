@@ -15,7 +15,7 @@ WORKDIR /src/epr_mcp
 COPY . /src/epr_mcp
 
 # Install the package and dependencies
-RUN pip install --no-cache-dir /src/epr_mcp/dist/epr_mcp-0.1.0-py2.py3-none-any.whl
+RUN pip install --no-cache-dir /src/epr_mcp/dist/epr_mcp-*-py3-none-any.whl
 
 # Add health check for HTTP server
 HEALTHCHECK --interval=90s --timeout=10s --start-period=5s --retries=3 \

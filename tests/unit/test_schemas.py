@@ -10,6 +10,7 @@ from epr_mcp.schemas import (
     _sanitize_string,
     validate_event_list_response,
     validate_event_response,
+    validate_input,
 )
 
 
@@ -354,3 +355,24 @@ class TestValidationErrorHandling:
 
         with pytest.raises(ValueError, match="Event list response validation failed"):
             validate_event_list_response(invalid_data)
+
+
+class TestInputModelsForbidExtraKeys:
+    """Input models reject unknown keys instead of silently dropping them."""
+
+    @pytest.mark.parametrize(
+        ("operation", "payload"),
+        [
+            ("search_events", {"data": {"name": "foo", "bogus": 1}}),
+            ("search_receivers", {"data": {"name": "foo", "bogus": 1}}),
+            ("search_groups", {"data": {"name": "foo", "bogus": 1}}),
+        ],
+    )
+    def test_search_inputs_reject_unknown_keys(self, operation, payload):
+        with pytest.raises(ValidationError):
+            validate_input(operation, payload)
+
+    def test_create_receiver_rejects_unknown_keys(self):
+        payload = {"data": {"name": "foo", "type": "t", "version": "1.0.0", "description": "d", "bogus": 1}}
+        with pytest.raises(ValidationError):
+            validate_input("create_receiver", payload)

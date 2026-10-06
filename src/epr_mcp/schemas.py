@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 class EventSearchInput(BaseModel):
     """Schema for event search input"""
 
+    model_config = {"extra": "forbid"}
+
     name: Optional[str] = Field(
         None,
         pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
@@ -45,6 +47,8 @@ class EventSearchInput(BaseModel):
 class EventReceiverSearchInput(BaseModel):
     """Schema for event receiver search input"""
 
+    model_config = {"extra": "forbid"}
+
     name: Optional[str] = Field(
         None,
         pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
@@ -70,6 +74,8 @@ class EventReceiverSearchInput(BaseModel):
 
 class EventReceiverGroupSearchInput(BaseModel):
     """Schema for event receiver group search input"""
+
+    model_config = {"extra": "forbid"}
 
     name: Optional[str] = Field(
         None,
@@ -104,6 +110,8 @@ class SearchDataWrapper(BaseModel):
 
 class EventCreateInput(BaseModel):
     """Schema for event creation input"""
+
+    model_config = {"extra": "forbid"}
 
     name: str = Field(
         ...,
@@ -152,6 +160,8 @@ class EventCreateInput(BaseModel):
 class EventReceiverCreateInput(BaseModel):
     """Schema for event receiver creation input"""
 
+    model_config = {"extra": "forbid"}
+
     name: str = Field(
         ...,
         pattern=r"^[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*(/[A-Za-z0-9]+([._-]?[A-Za-z0-9]+)*)*$",
@@ -179,6 +189,8 @@ class EventReceiverCreateInput(BaseModel):
 
 class EventReceiverGroupCreateInput(BaseModel):
     """Schema for event receiver group creation input"""
+
+    model_config = {"extra": "forbid"}
 
     name: str = Field(
         ...,

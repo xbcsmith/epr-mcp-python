@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=40.8.0", "wheel"]
-build-backend = "setuptools.build_meta:__legacy__"
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "epr-mcp"
@@ -39,6 +39,8 @@ lint = [
 test = [
     "coverage",
     "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
     "mock",
 ]
 
@@ -55,8 +57,8 @@ eprmcp = "epr_mcp.main:main"
 [project.urls]
 "Homepage" = "https://github.com/xbcsmith/epr-mcp-python"
 
-[tool.distutils.bdist_wheel]
-universal = true
+[tool.setuptools.package-data]
+epr_mcp = ["openapi.yaml"]
 
 [tool.ruff]
 line-length = 120
@@ -90,6 +92,7 @@ usedevelop = false
 deps =
     coverage
     pytest
+    pytest-asyncio
     mock
 extras = test
 commands =
