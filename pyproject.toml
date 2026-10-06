@@ -60,6 +60,9 @@ eprmcp = "epr_mcp.main:main"
 [tool.setuptools.package-data]
 epr_mcp = ["openapi.yaml"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.ruff]
 line-length = 120
 

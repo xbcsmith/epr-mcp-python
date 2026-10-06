@@ -259,7 +259,13 @@ EVENT_INPUT = {
     "event_receiver_id": EVENT_ID,
     "success": True,
 }
-RECEIVER_INPUT = {"name": "foobar", "type": "foo.bar", "version": "1.1.3", "description": "a receiver"}
+RECEIVER_INPUT = {
+    "name": "foobar",
+    "type": "foo.bar",
+    "version": "1.1.3",
+    "description": "a receiver",
+    "schema": {"type": "object", "properties": {"name": {"type": "string"}}},
+}
 GROUP_INPUT = {
     "name": "agroup",
     "type": "foo.group",
@@ -306,8 +312,10 @@ class TestSuccessPaths:
             ("create_group", "group_data", GROUP_INPUT, GROUP, "/api/v1/groups", "group"),
         ],
     )
-    async def test_create_success(self, cfg, mock_epr, tool, arg, payload, record, path, key):
-        mock_epr["handler"] = lambda request: httpx2.Response(201, json={"data": [record]})
+    @pytest.mark.parametrize("status", [200, 201])
+    async def test_create_success(self, cfg, mock_epr, tool, arg, payload, record, path, key, status):
+        """EPR answers a create with 200; some versions answer 201."""
+        mock_epr["handler"] = lambda request: httpx2.Response(status, json={"data": [record]})
         text = await call(server.create_server(cfg), tool, {arg: payload})
         result = json.loads(text)
         assert "created successfully" in result["message"]
@@ -324,7 +332,7 @@ class TestSuccessPaths:
             ("create_group", "group_data", GROUP_INPUT),
         ],
     )
-    async def test_create_non_201(self, cfg, mock_epr, tool, arg, payload):
+    async def test_create_non_success(self, cfg, mock_epr, tool, arg, payload):
         mock_epr["handler"] = lambda request: httpx2.Response(409, text="conflict")
         text = await call(server.create_server(cfg), tool, {arg: payload})
         assert text.startswith("Failed to create")
@@ -363,6 +371,56 @@ class TestSuccessPaths:
     async def test_fetch_response_validation_failure(self, cfg, mock_epr, tool):
         mock_epr["handler"] = lambda request: httpx2.Response(200, json={"data": {"unexpected": True}})
         assert "validation" in (await call(server.create_server(cfg), tool, {"id": EVENT_ID})).lower()
+
+
+class TestAgainstRealEprBehavior:
+    """Behavior observed against a running EPR rather than assumed from its docs."""
+
+    @pytest.mark.asyncio
+    async def test_create_receiver_requires_a_schema(self, cfg, mock_epr):
+        without_schema = {k: v for k, v in RECEIVER_INPUT.items() if k != "schema"}
+        text = await call(server.create_server(cfg), "create_receiver", {"receiver_data": without_schema})
+        assert text.startswith("Input validation error")
+        assert mock_epr["requests"] == []
+
+    @pytest.mark.asyncio
+    async def test_create_receiver_sends_schema_to_epr(self, cfg, mock_epr):
+        mock_epr["handler"] = lambda request: httpx2.Response(200, json={"data": [RECEIVER]})
+        await call(server.create_server(cfg), "create_receiver", {"receiver_data": RECEIVER_INPUT})
+        assert json.loads(mock_epr["requests"][0].content)["schema"] == RECEIVER_INPUT["schema"]
+
+    @pytest.mark.asyncio
+    async def test_group_search_does_not_request_unknown_fingerprint_field(self, cfg, mock_epr):
+        """The EPR GraphQL type EventReceiverGroup has no fingerprint; asking for it fails the query."""
+        mock_epr["handler"] = lambda request: httpx2.Response(200, json={"data": {"event_receiver_groups": []}})
+        await call(server.create_server(cfg), "search_groups", {"data": {"name": "agroup"}})
+        assert "fingerprint" not in json.loads(mock_epr["requests"][0].content)["query"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("tool", ["search_events", "search_receivers", "search_groups"])
+    async def test_graphql_errors_are_reported_not_hidden(self, cfg, mock_epr, tool):
+        mock_epr["handler"] = lambda request: httpx2.Response(200, json={"errors": [{"message": "Cannot query field"}]})
+        text = await call(server.create_server(cfg), tool, {"data": {}})
+        assert text.startswith("Failed to search")
+        assert "Cannot query field" in text
+
+
+class TestCreateReturnsIdOnly:
+    """A running EPR answers a create with only the new ID: {"data": "<id>"}."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("tool", "arg", "payload", "label"),
+        [
+            ("create_event", "event_data", EVENT_INPUT, "Event created"),
+            ("create_receiver", "receiver_data", RECEIVER_INPUT, "Event receiver created"),
+            ("create_group", "group_data", GROUP_INPUT, "Event receiver group created"),
+        ],
+    )
+    async def test_create_reports_the_new_id(self, cfg, mock_epr, tool, arg, payload, label):
+        mock_epr["handler"] = lambda request: httpx2.Response(200, json={"data": EVENT_ID})
+        result = json.loads(await call(server.create_server(cfg), tool, {arg: payload}))
+        assert result == {"message": f"{label} successfully", "id": EVENT_ID}
 
 
 class TestFlatArguments:

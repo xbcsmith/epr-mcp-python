@@ -160,7 +160,7 @@ class EventCreateInput(BaseModel):
 class EventReceiverCreateInput(BaseModel):
     """Schema for event receiver creation input"""
 
-    model_config = {"extra": "forbid"}
+    model_config = {"extra": "forbid", "populate_by_name": True}
 
     name: str = Field(
         ...,
@@ -176,6 +176,9 @@ class EventReceiverCreateInput(BaseModel):
         min_length=1,
     )
     description: str = Field(..., pattern=r"^(.|\s)*$", description="Event receiver description", min_length=1)
+    schema_data: Dict[str, Any] = Field(
+        ..., alias="schema", description="JSON schema that event payloads sent to this receiver must match"
+    )
 
     @field_validator("name", "type", "version", "description", mode="before")
     @classmethod
@@ -487,7 +490,7 @@ def validate_input(operation: str, input_data: Union[str, Dict[str, Any]]) -> Di
     # Sanitize dictionary inputs before validation
     sanitized_data = _sanitize_dict(input_data)
     validated = schema_class(**sanitized_data)
-    return validated.model_dump()
+    return validated.model_dump(by_alias=True)
 
 
 def get_validation_schema(operation: str) -> BaseModel:

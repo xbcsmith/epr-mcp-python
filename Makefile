@@ -28,6 +28,10 @@ wheel: ; $(info $(M) creating sdist bdist_wheel...) @ ## Create an sdist bdist_w
 docker-image: wheel; $(info $(M) building docker image...) @ ## Build the docker image
 	$Q docker build -t epr-mcp-python:latest .
 
+.PHONY: workshop-check
+workshop-check: ; $(info $(M) running workshop preflight...) @ ## Check the workshop setup (needs uv and a running EPR)
+	$Q cd docs/tutorials/code && uv run python check_setup.py
+
 .PHONY: clean
 clean: ; $(info $(M) cleaning...)	@ ## Cleanup everything
 	@rm -rvf bin tools vendor build dist

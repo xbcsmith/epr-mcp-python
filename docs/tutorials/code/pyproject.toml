@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+[project]
+name = "epr-workshop"
+version = "0.1.0"
+description = "Workshop code for building an EPR MCP server with FastMCP 4"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp==4.0.11",
+    "httpx2==2.13.1",
+    "pydantic>=2.12",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.uv]
+# These are scripts, not an installable package.
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"

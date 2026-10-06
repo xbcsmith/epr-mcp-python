@@ -1,4 +1,9 @@
 .vscode
+!docs/tutorials/code/.vscode/
+/uv.lock
+docs/tutorials/code/work/
+docs/tutorials/code/seed_ids.json
+docs/tutorials/code/epr-server.tar.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -35,6 +35,9 @@ from .schemas import (
 
 logger = logging.getLogger(__name__)
 
+# EPR answers a successful create with 200; some versions answer 201.
+CREATED_STATUS_CODES = (200, 201)
+
 
 def filter_none_values(data: dict) -> dict:
     """Filter out None values from a dictionary to avoid sending null values to GraphQL"""
@@ -295,6 +298,8 @@ def create_server(cfg: Config) -> FastMCP:
                 logger.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
+                    if result.get("errors"):
+                        return f"Failed to search events: {result['errors']}"
                     logger.debug(f"Raw GraphQL response structure: {type(result)}")
                     events_data = result.get("data", {}).get("events", [])
                     logger.debug(f"Extracted events data: {len(events_data)} events found")
@@ -348,6 +353,8 @@ def create_server(cfg: Config) -> FastMCP:
                 logger.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
+                    if result.get("errors"):
+                        return f"Failed to search event receivers: {result['errors']}"
                     logger.debug(f"Raw GraphQL response structure: {type(result)}")
                     receivers_data = result.get("data", {}).get("event_receivers", [])
                     logger.debug(f"Extracted receivers data: {len(receivers_data)} receivers found")
@@ -374,9 +381,7 @@ def create_server(cfg: Config) -> FastMCP:
 
     @mcp.tool(title="Search Event Receiver Groups", description="Search for event receiver groups in EPR")
     async def search_groups(
-        data: Annotated[
-            dict, Field(description="Search criteria: any of name, type, version, description")
-        ],
+        data: Annotated[dict, Field(description="Search criteria: any of name, type, version, description")],
     ) -> str:
         """Search for event receiver groups in the EPR"""
         try:
@@ -399,7 +404,6 @@ def create_server(cfg: Config) -> FastMCP:
                 "description",
                 "enabled",
                 "event_receiver_ids",
-                "fingerprint",
                 "created_at",
                 "updated_at",
             ]
@@ -414,6 +418,8 @@ def create_server(cfg: Config) -> FastMCP:
                 logger.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
+                    if result.get("errors"):
+                        return f"Failed to search event receiver groups: {result['errors']}"
                     logger.debug(f"Raw GraphQL response structure: {type(result)}")
                     groups_data = result.get("data", {}).get("event_receiver_groups", [])
                     logger.debug(f"Extracted groups data: {len(groups_data)} groups found")
@@ -466,7 +472,7 @@ def create_server(cfg: Config) -> FastMCP:
             async with create_client(cfg) as client:
                 response = await client.post(url, json=event.as_dict_query())
                 logger.debug(f"POST response status: {response.status_code}")
-                if response.status_code == 201:
+                if response.status_code in CREATED_STATUS_CODES:
                     response_data = response.json()
                     logger.debug(f"Raw response data type: {type(response_data)}")
                     # Handle case where API wraps data in a 'data' field
@@ -480,6 +486,10 @@ def create_server(cfg: Config) -> FastMCP:
                             return json.dumps({"error": "Event creation returned empty result"}, indent=2)
                         # Take the first event from the array
                         created_event_data = created_event_data[0]
+
+                    # EPR normally answers a create with just the new ID: {"data": "<id>"}
+                    if isinstance(created_event_data, str):
+                        return json.dumps({"message": "Event created successfully", "id": created_event_data}, indent=2)
 
                     # Validate response data with Pydantic schema
                     validated_event_data = validate_event_response(created_event_data)
@@ -506,7 +516,10 @@ def create_server(cfg: Config) -> FastMCP:
     @mcp.tool(title="Create Event Receiver", description="Create a new event receiver in EPR")
     async def create_receiver(
         receiver_data: Annotated[
-            dict, Field(description="Event receiver creation data containing name, type, version, and description")
+            dict,
+            Field(
+                description="Event receiver creation data containing name, type, version, description, and schema (a JSON schema that event payloads must match)"
+            ),
         ],
     ) -> str:
         """Create a new event receiver in the EPR"""
@@ -528,7 +541,7 @@ def create_server(cfg: Config) -> FastMCP:
             async with create_client(cfg) as client:
                 response = await client.post(url, json=receiver.as_dict_query())
                 logger.debug(f"POST response status: {response.status_code}")
-                if response.status_code == 201:
+                if response.status_code in CREATED_STATUS_CODES:
                     response_data = response.json()
                     logger.debug(f"Raw response data type: {type(response_data)}")
                     # Handle case where API wraps data in a 'data' field
@@ -542,6 +555,12 @@ def create_server(cfg: Config) -> FastMCP:
                             return json.dumps({"error": "Event receiver creation returned empty result"}, indent=2)
                         # Take the first receiver from the array
                         created_receiver_data = created_receiver_data[0]
+
+                    # EPR normally answers a create with just the new ID: {"data": "<id>"}
+                    if isinstance(created_receiver_data, str):
+                        return json.dumps(
+                            {"message": "Event receiver created successfully", "id": created_receiver_data}, indent=2
+                        )
 
                     # Validate response data with Pydantic schema
                     validated_receiver_data = validate_event_receiver_response(created_receiver_data)
@@ -594,7 +613,7 @@ def create_server(cfg: Config) -> FastMCP:
             async with create_client(cfg) as client:
                 response = await client.post(url, json=group.as_dict_query())
                 logger.debug(f"POST response status: {response.status_code}")
-                if response.status_code == 201:
+                if response.status_code in CREATED_STATUS_CODES:
                     response_data = response.json()
                     logger.debug(f"Raw response data type: {type(response_data)}")
                     # Handle case where API wraps data in a 'data' field
@@ -610,6 +629,12 @@ def create_server(cfg: Config) -> FastMCP:
                             )
                         # Take the first group from the array
                         created_group_data = created_group_data[0]
+
+                    # EPR normally answers a create with just the new ID: {"data": "<id>"}
+                    if isinstance(created_group_data, str):
+                        return json.dumps(
+                            {"message": "Event receiver group created successfully", "id": created_group_data}, indent=2
+                        )
 
                     # Validate response data with Pydantic schema
                     validated_group_data = validate_event_receiver_group_response(created_group_data)

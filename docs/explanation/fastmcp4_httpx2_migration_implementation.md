@@ -241,3 +241,106 @@ it in the 2.0 notes.
 `schemas.py` calls `raise ValidationError("...")` with the Pydantic class, which
 cannot be constructed that way; those branches would fail with a `TypeError`
 instead of a validation message.
+
+## Phase 3: Tutorial Rewrite for Workshop Delivery
+
+### Phase 3 changes
+
+- `docs/tutorials/`: the six hyphenated tutorials (which taught the official
+  `mcp` SDK, `pip install mcp[cli] httpx`, and Docker-launched stdio) are
+  replaced by `README.md` (agenda, prerequisites, checkpoint table, facilitator
+  notes) and eight lowercase modules: `00_intro`, `01_first_tool`,
+  `02_inspector`, `03_complete_tool_set`, `04_validation_and_errors`,
+  `05_test_it`, `06_use_from_an_editor`, and `07_misc_and_troubleshooting`.
+- `docs/tutorials/code/`: `pyproject.toml` and `uv.lock` pinning `fastmcp`
+  4.0.11 and `httpx2` 2.13.1; four checkpoint directories; `docker-compose.yaml`
+  and `epr/Dockerfile` for EPR only; `seed_epr.py`; `check_setup.py`
+  (preflight); `client.py` (terminal MCP client); `.vscode/mcp.json` and
+  `claude_desktop_config.json` for two servers, the workshop server and the
+  shipped `eprmcp`, both launched with `uv run` over stdio.
+- `tests/tutorials/test_tutorial_code.py`: every checkpoint server imports and
+  lists the right tools, the checkpoint 05 tests pass, checkpoint 05's server
+  equals checkpoint 04's, both editor configs reference existing files, the
+  compose file runs only EPR services, file names follow AGENTS.md Rule 1, and
+  no stale `mcp.server.fastmcp`, `import httpx`, or FastMCP 2 references remain
+  outside module 07.
+- `Makefile`: new `workshop-check` target. `.gitignore`: `work/`,
+  `seed_ids.json`, and the saved EPR image are ignored, and the tutorial's
+  `.vscode/` is re-included (`.vscode` is ignored repository-wide).
+- `pyproject.toml`: `testpaths = ["tests"]` so a plain `pytest` does not collect
+  the tutorial code.
+
+### Deviations from the plan
+
+- Checkpoints hold the finished code at the end of a module (the starter for a
+  module is the previous checkpoint) instead of separate starter and solution
+  directories. There is no checkpoint 02 or 06 because those modules do not
+  change code.
+- The workshop server is a standalone file, not a copy of the shipped package.
+  Module 04 uses `ToolError` for failures; the shipped server returns error
+  text.
+- The plan's dry run with a person new to the project has not happened, so the
+  timings in the agenda are estimates.
+
+### Found by running everything against a real EPR
+
+EPR was built and started with the workshop compose file, then the seed script,
+the tutorial servers, and the shipped server were run against it. This found
+problems that mocked tests could not:
+
+1. **EPR's own image does not start.** Its Dockerfile builds `FROM scratch` with
+   no time zone database, and the server always connects to Postgres with
+   `TimeZone=America/New_York`, so it exits with "unknown time zone". The
+   workshop `epr/Dockerfile` builds the same pinned commit
+   (`f8f115b790c58b8fab3bfd47278e51e4f15e9f0e`) and adds `/usr/share/zoneinfo`.
+   There is no published EPR image; the first build takes about three minutes.
+2. **The shipped create tools reported failure on success.** EPR answers a
+   create with HTTP 200, but the shipped tools only accepted 201, so every
+   `create_*` call returned "Failed to create..." although the record was
+   created. They now accept 200 and 201.
+3. **The shipped create tools failed after a successful create.** EPR returns
+   only the new ID (`{"data": "<id>"}`), but the tools tried to validate it as a
+   record. They now return
+   `{"message": "... created successfully", "id": "<id>"}` when EPR returns an
+   ID, and still handle a full record.
+4. **`create_receiver` could not work.** EPR requires a `schema` ("invalid
+   input: schema is required"), and the input model had no `schema` field (after
+   the Phase 2 change to forbid unknown keys, supplying one was rejected too).
+   The model now requires `schema`, accepted under that name.
+5. **`search_groups` always returned an empty list.** It asked for a
+   `fingerprint` field that the EPR GraphQL type `EventReceiverGroup` does not
+   have, the query failed, and the error was swallowed. The field is removed,
+   and all three search tools now report a GraphQL `errors` list instead of
+   hiding it.
+6. **Error shapes differ by case.** A well-formed missing ID is HTTP 404; a
+   malformed ID or a bad GraphQL query is HTTP 200 with
+   `{"data": null, "errors": [...]}`. The tutorial server checks for both. A
+   stopped EPR behind Docker's port proxy surfaces as `ReadError` with an empty
+   message rather than `ConnectError`, so the tutorial maps `TransportError` and
+   shows the exception name.
+7. The Inspector is now version 2.9.0 with a different interface and an access
+   token in the URL. Module 02 pins that version and describes only the steps
+   that hold across versions.
+
+Unit tests were added for items 2 to 5 (`TestAgainstRealEprBehavior` and
+`TestCreateReturnsIdOnly` in `tests/unit/test_server_tools.py`); the suite is
+238 tests passing with 88% coverage.
+
+### Verified
+
+- On macOS: the full preflight (`check_setup.py`) passes, including starting the
+  workshop server and the shipped server with the exact `uv run` commands from
+  the editor configs and listing 9 tools each; every command in modules 00 to 05
+  was run against the live EPR; `uv run pytest work` and
+  `uv run pytest checkpoint_05_tests` pass.
+- On Linux (a `uv` Docker image with Python 3.12 and uv 0.9.30): the same
+  preflight passes against the macOS-hosted EPR.
+- The Phase 2 items that needed a running EPR are now checked: all nine shipped
+  tools work against the live EPR, over stdio and over HTTP.
+
+### Not verified
+
+- The VS Code and Claude Desktop screens and the Inspector 2.9.0 interface were
+  not opened. Modules 02 and 06 describe the steps from the documentation and
+  the launch commands are tested, but the on-screen wording is unconfirmed.
+- No dry run of the agenda with a new attendee, so timings are estimates.

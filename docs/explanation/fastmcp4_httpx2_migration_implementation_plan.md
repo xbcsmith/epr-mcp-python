@@ -332,13 +332,17 @@ ends with a runnable checkpoint. Rename files to lowercase underscores
 
 #### 3.5 Deliverables
 
-- [ ] Eight renamed, rewritten tutorial modules
-- [ ] `docs/tutorials/README.md` with agenda and facilitator notes
-- [ ] Checkpoint code directories with CI check
-- [ ] One-command EPR environment and a host-run stdio MCP server
+- [x] Eight renamed, rewritten tutorial modules
+- [x] `docs/tutorials/README.md` with agenda and facilitator notes
+- [x] Checkpoint code directories with CI check
+      (`tests/tutorials/test_tutorial_code.py`)
+- [x] One-command EPR environment and a host-run stdio MCP server
 - [ ] `.vscode/mcp.json` and Claude Desktop config tested on macOS and Linux
-- [ ] Preflight check script with Inspector and terminal-client fallbacks
-- [ ] No references to `mcp.server.fastmcp`, `httpx` imports, or FastMCP 2.0
+      (the exact `uv run` launch commands pass on macOS and Linux; the VS Code
+      and Claude Desktop screens themselves are not yet tried)
+- [x] Preflight check script with Inspector and terminal-client fallbacks
+- [x] No references to `mcp.server.fastmcp`, `httpx` imports, or FastMCP 2.0
+      (outside the migration notes in module 07)
 
 #### 3.6 Success Criteria
 

@@ -1,0 +1,68 @@
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+#
+# Workshop environment: runs ONLY the Event Provenance Registry (EPR) and its
+# dependencies. The MCP server is never run in Docker; it runs on your machine
+# from a uv environment (see module 06).
+#
+#   docker compose up -d --build     start EPR on http://localhost:8042
+#   docker compose down -v           stop it and delete its data
+#
+# EPR has no published image, so ./epr/Dockerfile builds it from source (about
+# three minutes the first time, cached afterwards). To skip the build, for
+# example on a slow venue network, load an image the facilitator prepared with
+# `docker load` and set EPR_IMAGE to its name.
+name: epr-workshop
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - epr
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.2.8
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092
+      - --advertise-kafka-addr internal://redpanda:9092
+      - --mode dev-container
+      - --smp 1
+      - --default-log-level=warn
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster info -X brokers=redpanda:9092 || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+    networks:
+      - epr
+
+  epr-server:
+    image: ${EPR_IMAGE:-epr-server:workshop}
+    build:
+      context: ./epr
+    environment:
+      EPR_BROKERS: redpanda:9092
+      EPR_DB: postgres://postgres:5432
+      EPR_HOST: 0.0.0.0
+    ports:
+      - "8042:8042"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - epr
+
+networks:
+  epr:
