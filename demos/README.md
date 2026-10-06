@@ -118,7 +118,7 @@ python generate_epr_events.py --timeout 30.0
 
 This script will:
 - Generate event receivers for 11 different CDEvent types
-- Create sample events for services named "foo", "bar", "baz", "qux"  
+- Create sample events for services named "foo", "bar", "baz", "qux"
 - Support three modes: live posting, dry-run with curl commands, or file output
 - Generate realistic CDEvent payloads with proper context and subject data
 - Create ULID identifiers and timestamps for each event
@@ -220,7 +220,7 @@ python generate_epr_events.py --write-to-disk
 
 # Generated files will be in:
 # epr_reports/event_receivers/  - Event receiver JSON files
-# epr_reports/events/           - Event JSON files  
+# epr_reports/events/           - Event JSON files
 # epr_reports/curl_commands_*.txt - Ready-to-use curl commands
 ```
 
@@ -242,7 +242,7 @@ python generate_epr_events.py --url http://localhost:8042
 Once the server is running:
 
 1. **Interactive API Explorer**: Visit [http://localhost:8000/docs](http://localhost:8000/docs)
-2. **OpenAPI Specification**: 
+2. **OpenAPI Specification**:
    - JSON: [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json)
    - YAML: [http://localhost:8000/openapi.yaml](http://localhost:8000/openapi.yaml)
 3. **Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
@@ -278,7 +278,7 @@ from mcp.client import Client
 async with Client("stdio", ["python", "-m", "epr_mcp.main"]) as client:
     # List available tools
     tools = await client.list_tools()
-    
+
     # Call a tool
     result = await client.call_tool("searchEvents", {
         "name": "deployment"
@@ -336,7 +336,7 @@ if __name__ == "__main__":
    ```bash
    # Main package and demo dependencies
    pip install -e . httpx ulid-py
-   
+
    # If you get import errors, verify installation:
    python -c "import httpx, ulid; print('Dependencies OK')"
    ```
@@ -344,7 +344,7 @@ if __name__ == "__main__":
    ```bash
    # Check if virtual environment is active (should show venv path)
    which python
-   
+
    # Activate if needed
    source venv/bin/activate  # macOS/Linux
    # venv\Scripts\activate   # Windows
@@ -357,7 +357,7 @@ if __name__ == "__main__":
    ```bash
    # Install missing dependencies
    pip install httpx ulid-py
-   
+
    # Verify imports work
    python -c "import httpx, ulid, json, logging; print('All imports OK')"
    ```

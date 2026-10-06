@@ -123,7 +123,7 @@ The EPR MCP server provides both MCP tools and OpenAPI endpoints for interacting
 The server automatically generates MCP tools from the OpenAPI specification:
 
 - `fetchEvent` - Fetch an event by ID
-- `fetchReceiver` - Fetch an event receiver by ID  
+- `fetchReceiver` - Fetch an event receiver by ID
 - `fetchGroup` - Fetch an event receiver group by ID
 - `createEvent` - Create a new event
 - `createReceiver` - Create a new event receiver
@@ -154,7 +154,7 @@ When the server is running, the following OpenAPI endpoints are available:
 mcp.call_tool('fetchEvent', {'id': 'event-123'})
 
 mcp.call_tool('searchEvents', {
-    'name': 'deployment', 
+    'name': 'deployment',
     'version': '1.0.0'
 })
 

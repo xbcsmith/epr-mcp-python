@@ -31,7 +31,7 @@ docker-image: wheel; $(info $(M) building docker image...) @ ## Build the docker
 .PHONY: clean
 clean: ; $(info $(M) cleaning...)	@ ## Cleanup everything
 	@rm -rvf bin tools vendor build dist
-	@rm -rvf *.egg-info *.egg .pytest_cache .ruff_cache .tox .coverage src/*.egg-info 
+	@rm -rvf *.egg-info *.egg .pytest_cache .ruff_cache .tox .coverage src/*.egg-info
 	@rm -rvf src/epr_mcp/__pycache__ tests/__pycache__ tests/unit/__pycache__
 
 .PHONY: help

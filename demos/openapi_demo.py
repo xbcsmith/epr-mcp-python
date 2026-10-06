@@ -38,16 +38,16 @@ async def demo_openapi_endpoints():
     """Demonstrate the OpenAPI endpoints."""
     print("🚀 EPR MCP Server OpenAPI Demo")
     print("=" * 50)
-    
+
     print("\n📝 OpenAPI Specification Available at:")
     print("   • YAML format: http://localhost:8000/openapi.yaml")
     print("   • JSON format: http://localhost:8000/openapi.json")
-    
+
     print("\n📚 API Documentation Available at:")
     print("   • Swagger UI: http://localhost:8000/docs")
-    
+
     print("\n🔍 Available MCP Tools (generated from OpenAPI spec):")
-    
+
     # List the operations that would be available as MCP tools
     operations = [
         ("fetchEvent", "GET /api/v1/events/{id} - Fetch a single event"),
@@ -61,28 +61,28 @@ async def demo_openapi_endpoints():
         ("searchGroups", "POST /api/v1/groups/search - Search for event receiver groups"),
         ("healthCheck", "GET /health - Health check endpoint"),
     ]
-    
+
     for op_id, description in operations:
         print(f"   • {op_id}: {description}")
-    
+
     print("\n🏗️  Data Models:")
     models = ["Event", "EventReceiver", "EventReceiverGroup", "SearchCriteria", "Error"]
     for model in models:
         print(f"   • {model}")
-    
+
     print("\n💡 Key Features:")
     print("   • Automatic MCP tool generation from OpenAPI spec")
     print("   • Type-safe request/response handling")
     print("   • Built-in API documentation")
     print("   • Schema validation using Pydantic models")
     print("   • Swagger UI for interactive testing")
-    
+
     print("\n🎯 Next Steps:")
     print("   1. Start the server: python -m epr_mcp.main")
     print("   2. Visit http://localhost:8000/docs to explore the API")
     print("   3. Use MCP tools to interact with EPR endpoints")
     print("   4. Access OpenAPI spec at http://localhost:8000/openapi.json")
-    
+
     print("\n📋 Example MCP Tool Usage:")
     print("   # Fetch an event")
     print("   mcp.call_tool('fetchEvent', {'id': 'event-123'})")
@@ -102,7 +102,7 @@ async def demo_openapi_endpoints():
     print("       'success': True,")
     print("       'payload': {'key': 'value'}")
     print("   })")
-    
+
     print("\n" + "=" * 50)
     print("Demo completed! 🎉")
 
