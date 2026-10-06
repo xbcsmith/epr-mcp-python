@@ -7,6 +7,9 @@ import os
 import sys
 from typing import Optional
 
+import httpx2
+
+from .config import Config
 from .errors import debug_except_hook
 from .models import GraphQLQuery
 
@@ -17,6 +20,29 @@ debug = os.environ.get("EPR_DEBUG")
 if debug:
     sys.excepthook = debug_except_hook
     logger.setLevel(logging.DEBUG)
+
+
+def create_client(cfg: Config) -> httpx2.AsyncClient:
+    """Create an HTTP client for the EPR API.
+
+    The client sends a JSON content type and, when the configuration has a
+    token, an ``Authorization: Bearer`` header on every request.
+
+    Args:
+        cfg: Server configuration providing the optional API token.
+
+    Returns:
+        A new ``httpx2.AsyncClient``; use it as an async context manager.
+
+    Examples:
+        >>> client = create_client(Config(url="http://epr", token="abc"))
+        >>> client.headers["Authorization"]
+        'Bearer abc'
+    """
+    headers = {"Content-Type": "application/json"}
+    if cfg.token:
+        headers["Authorization"] = f"Bearer {cfg.token}"
+    return httpx2.AsyncClient(headers=headers)
 
 
 def get_operation(name: str, operation: str) -> str:

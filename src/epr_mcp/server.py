@@ -10,15 +10,14 @@ import sys
 from pathlib import Path
 from typing import Annotated
 
+import httpx2
 import yaml
-
-import httpx
 from fastmcp import Context, FastMCP
 from pydantic import Field, ValidationError
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
-from .common import get_search_query
+from .common import create_client, get_search_query
 from .errors import debug_except_hook
 from .models import Event, EventReceiver, EventReceiverGroup
 from .schemas import (
@@ -44,13 +43,13 @@ def filter_none_values(data: dict) -> dict:
 
 async def handle_http_errors(ctx: Context, e: Exception, operation: str, cfg) -> str:
     """Handle common HTTP errors and return user-friendly error messages"""
-    if isinstance(e, httpx.ConnectError):
+    if isinstance(e, httpx2.ConnectError):
         await ctx.error(f"Connection failed to {cfg.url}: {e!s}")
         return f"Connection failed to EPR server at {cfg.url}. Please check if the EPR server is running and accessible. Error: {e!s}"
-    elif isinstance(e, httpx.TimeoutException):
+    elif isinstance(e, httpx2.TimeoutException):
         await ctx.error(f"Request timeout to {cfg.url}: {e!s}")
         return f"Request timeout to EPR server at {cfg.url}. Error: {e!s}"
-    elif isinstance(e, httpx.HTTPStatusError):
+    elif isinstance(e, httpx2.HTTPStatusError):
         await ctx.error(f"HTTP error from {cfg.url}: {e!s}")
         return f"HTTP error from EPR server: {e.response.status_code} - {e.response.text}"
     else:
@@ -82,7 +81,7 @@ def run(cfg):
             url = f"{cfg.url}/api/v1/events/{event_id}"
             await ctx.debug(f"Making GET request to: {url}")
 
-            async with httpx.AsyncClient() as client:
+            async with create_client(cfg) as client:
                 response = await client.get(url)
                 await ctx.debug(f"GET response status: {response.status_code}")
                 if response.status_code == 200:
@@ -136,7 +135,7 @@ def run(cfg):
             url = f"{cfg.url}/api/v1/receivers/{receiver_id}"
             await ctx.debug(f"Making GET request to: {url}")
 
-            async with httpx.AsyncClient() as client:
+            async with create_client(cfg) as client:
                 response = await client.get(url)
                 await ctx.debug(f"GET response status: {response.status_code}")
                 if response.status_code == 200:
@@ -190,7 +189,7 @@ def run(cfg):
             url = f"{cfg.url}/api/v1/groups/{group_id}"
             await ctx.debug(f"Making GET request to: {url}")
 
-            async with httpx.AsyncClient() as client:
+            async with create_client(cfg) as client:
                 response = await client.get(url)
                 await ctx.debug(f"GET response status: {response.status_code}")
                 if response.status_code == 200:
@@ -270,9 +269,8 @@ def run(cfg):
             url = f"{cfg.url}/api/v1/graphql/query"
             await ctx.debug(f"Making POST request to: {url}")
 
-            async with httpx.AsyncClient() as client:
-                headers = {"Content-Type": "application/json"}
-                response = await client.post(url, json=query.as_dict_query(), headers=headers)
+            async with create_client(cfg) as client:
+                response = await client.post(url, json=query.as_dict_query())
                 await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
@@ -325,9 +323,8 @@ def run(cfg):
             url = f"{cfg.url}/api/v1/graphql/query"
             await ctx.debug(f"Making POST request to: {url}")
 
-            async with httpx.AsyncClient() as client:
-                headers = {"Content-Type": "application/json"}
-                response = await client.post(url, json=query.as_dict_query(), headers=headers)
+            async with create_client(cfg) as client:
+                response = await client.post(url, json=query.as_dict_query())
                 await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
@@ -393,9 +390,8 @@ def run(cfg):
             url = f"{cfg.url}/api/v1/graphql/query"
             await ctx.debug(f"Making POST request to: {url}")
 
-            async with httpx.AsyncClient() as client:
-                headers = {"Content-Type": "application/json"}
-                response = await client.post(url, json=query.as_dict_query(), headers=headers)
+            async with create_client(cfg) as client:
+                response = await client.post(url, json=query.as_dict_query())
                 await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
@@ -449,7 +445,7 @@ def run(cfg):
             url = f"{cfg.url}/api/v1/events"
             await ctx.debug(f"Making POST request to: {url}")
 
-            async with httpx.AsyncClient() as client:
+            async with create_client(cfg) as client:
                 response = await client.post(url, json=event.as_dict_query())
                 await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 201:
@@ -512,7 +508,7 @@ def run(cfg):
             url = f"{cfg.url}/api/v1/receivers"
             await ctx.debug(f"Making POST request to: {url}")
 
-            async with httpx.AsyncClient() as client:
+            async with create_client(cfg) as client:
                 response = await client.post(url, json=receiver.as_dict_query())
                 await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 201:
@@ -579,7 +575,7 @@ def run(cfg):
             url = f"{cfg.url}/api/v1/groups"
             await ctx.debug(f"Making POST request to: {url}")
 
-            async with httpx.AsyncClient() as client:
+            async with create_client(cfg) as client:
                 response = await client.post(url, json=group.as_dict_query())
                 await ctx.debug(f"POST response status: {response.status_code}")
                 if response.status_code == 201:

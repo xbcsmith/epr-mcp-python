@@ -160,8 +160,9 @@ decided and written down.
   (timeout, headers, `Authorization` bearer from `cfg.token` when set) to
   replace the 9 repeated `AsyncClient()` constructions in `server.py`;
   `server.py` currently never sends the token, so this is a behavior change to
-  call out in the migration notes. `openapi_server.py` is deleted in Phase 2, so
-  it is not migrated.
+  call out in the migration notes. `openapi_server.py` was deleted in Phase 1
+  (it imports the removed `fastmcp.server.openapi` and legacy `httpx`, so it
+  blocked the Phase 1 success criteria).
 - Check for external services reached through the OS trust store change (httpx2
   uses `truststore`); document `SSL_CERT_FILE` / `SSL_CERT_DIR` fallbacks in
   tutorial module 07 (misc and troubleshooting).
@@ -175,10 +176,10 @@ decided and written down.
 
 #### 1.5 Deliverables
 
-- [ ] `pyproject.toml` and tox config updated
-- [ ] All `src/` HTTP code on `httpx2`
-- [ ] Shared client factory with tests
-- [ ] `ruff check src/` and `pytest` pass
+- [x] `pyproject.toml` and tox config updated
+- [x] All `src/` HTTP code on `httpx2`
+- [x] Shared client factory with tests
+- [x] `ruff check src/` and `pytest` pass
 
 #### 1.6 Success Criteria
 
@@ -206,11 +207,11 @@ clean venv pulls `httpx2` and no direct `httpx` dependency of this project.
 
 #### 2.2 Integrate Feature
 
-- Delete [openapi_server.py](../../src/epr_mcp/openapi_server.py) and remove
-  every reference: imports, `docs/openapi_implementation.md` (rewrite to
-  describe only the `/openapi.yaml`, `/openapi.json`, and `/docs` routes that
-  remain in `server.py`), the demos, and `tests/test_smoke.py` if referenced.
-  Keep `openapi.yaml`, which `server.py` serves.
+- `openapi_server.py` is already deleted (Phase 1); remove every remaining
+  reference: imports, `docs/openapi_implementation.md` (rewrite to describe only
+  the `/openapi.yaml`, `/openapi.json`, and `/docs` routes that remain in
+  `server.py`), the demos, and `tests/test_smoke.py` if referenced. Keep
+  `openapi.yaml`, which `server.py` serves.
 - Add a `--transport` option to `main.py start` with values `stdio` and `http`
   (default `http` to keep Docker behavior). The stdio path calls the framework's
   stdio run method; logging already goes to stderr, and no code path may print

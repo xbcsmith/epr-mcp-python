@@ -10,7 +10,7 @@ class Config:
     """Data class for Config"""
 
     url: str
-    token: str
+    token: str | None = None
     debug: bool = False
 
     def as_dict(self):

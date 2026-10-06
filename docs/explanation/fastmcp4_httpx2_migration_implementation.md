@@ -96,3 +96,41 @@ below.
   transport itself is verified). Confirmed in Phase 3 on macOS and Linux.
 - Whether `fastmcp` 4 emits a deprecation warning for the `mcp.run(...)` call
   styles the tutorials will teach; check while writing module 01.
+
+## Phase 1: Dependency and httpx2 Migration
+
+### Changes
+
+- `pyproject.toml`: `fastmcp>=4.0,<5`, `httpx2>=2.13`, `pydantic>=2.12`,
+  `starlette>=1.0`; `httpx` removed; tox `extras` fixed to `test`.
+- `src/epr_mcp/server.py`: `import httpx2`; the exception checks in
+  `handle_http_errors` use `httpx2` types; the 9 client sites use
+  `create_client(cfg)`.
+- `src/epr_mcp/common.py`: new `create_client(cfg)` returning an
+  `httpx2.AsyncClient` with a JSON content type and an optional bearer header.
+- `src/epr_mcp/config.py`: `Config.token` is optional (default `None`); it was
+  typed `str` but is passed `None` when no token is set.
+- `src/epr_mcp/openapi_server.py`: deleted (decision); it imported the removed
+  `fastmcp.server.openapi` and the legacy `httpx`.
+- `tests/unit/test_http_errors.py`: new tests for `handle_http_errors` (connect,
+  timeout, status, generic errors) and a guard against legacy `httpx` imports.
+- `tests/unit/test_common.py`: new `TestCreateClient` covering the bearer
+  header, no header without a token, and the client type.
+
+The two baseline `ruff` errors are fixed.
+
+### Behavior changes (for the 2.0 notes)
+
+- The EPR token is now sent as `Authorization: Bearer` on every request made by
+  `server.py`. Before, `server.py` never sent it.
+- The User-Agent becomes `python-httpx2/<version>`.
+- TLS verification uses the operating system trust store instead of the bundled
+  `certifi` certificates; `SSL_CERT_FILE` and `SSL_CERT_DIR` are still honored.
+- The three POST search tools no longer set their own `Content-Type` header; the
+  shared client sets it.
+
+### Results
+
+`ruff check src/ tests/` passes, 134 tests pass (126 before), and no legacy
+`httpx` import remains in `src/` or `tests/`. Coverage is 43% (was 40%);
+`server.py` coverage arrives with the Phase 2 in-memory-client tests.
