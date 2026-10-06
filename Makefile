@@ -10,7 +10,7 @@ install: ;$(info $(M) installing mcp...) @ ## Installs epr-mcp-python into a vir
 
 .PHONY: lint
 lint: ; $(info $(M) running linter...) @ ## Run linter (requires ruff)
-	$Q ruff format -v src/epr_mcp/ tests/ && ruff check --fix -v src/epr_mcp/ tests/
+	$Q ruff format -v src/epr_mcp/ tests/ demos/ && ruff check --fix -v src/epr_mcp/ tests/ demos/
 
 .PHONY: tests
 tests: ; $(info $(M) running tests...) @ ## Run tests

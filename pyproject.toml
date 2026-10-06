@@ -120,7 +120,7 @@ deps =
     ruff
 skip_install = true
 commands =
-    ruff check src/epr_mcp/ tests/
+    ruff check src/epr_mcp/ tests/ demos/
 
 [testenv:report]
 deps = coverage
@@ -154,6 +154,6 @@ deps =
     ruff
 skip_install = true
 commands =
-    ruff check --fix src/epr_mcp/ tests/
+    ruff check --fix src/epr_mcp/ tests/ demos/
 
 """

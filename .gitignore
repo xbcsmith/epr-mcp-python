@@ -1,6 +1,7 @@
 .vscode
 !docs/tutorials/code/.vscode/
 /uv.lock
+epr_reports/
 docs/tutorials/code/work/
 docs/tutorials/code/seed_ids.json
 docs/tutorials/code/epr-server.tar.gz

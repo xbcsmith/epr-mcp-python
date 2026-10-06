@@ -1,2 +1,10 @@
-httpx>=0.23.0
-ulid>=1.1.0
+# Packages the demos import. The simplest way to run them is from the repository
+# root with uv, which installs everything: uv run python demos/<demo>.py
+#
+# With pip instead, install the package (it brings fastmcp, httpx2, and PyYAML):
+#   pip install -e .
+# generate_epr_events.py needs only httpx2:
+#   pip install -r demos/requirements.txt
+fastmcp>=4.0,<5
+httpx2>=2.13
+PyYAML

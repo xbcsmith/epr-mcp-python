@@ -344,3 +344,68 @@ Unit tests were added for items 2 to 5 (`TestAgainstRealEprBehavior` and
   not opened. Modules 02 and 06 describe the steps from the documentation and
   the launch commands are tested, but the on-screen wording is unconfirmed.
 - No dry run of the agenda with a new attendee, so timings are estimates.
+
+## Phase 4: Demos With Scripts
+
+### Phase 4 changes
+
+- `demos/generate_epr_events.py`: moved to `httpx2`; the `ulid` dependency is
+  gone (the script now builds ULIDs itself: a 48-bit millisecond timestamp plus
+  80 random bits in Crockford base32, covered by tests); the release string used
+  `strftime("%Y.%m.%s")`, where `%s` is the epoch seconds on some platforms and
+  unsupported on others, and is now `%d`; the script exits 1 when any request
+  fails; the `httpx2` request log is quiet so the demo output is readable.
+- `demos/openapi_demo.py`: rewritten. The old script was broken (it inserted a
+  non-existent `demos/src` on `sys.path`, imported unused modules, and only
+  printed a hard-coded tool list). The new one starts the server over HTTP on a
+  free port (or uses `--url`), calls `/health`, `/openapi.yaml`,
+  `/openapi.json`, and `/docs`, checks that the YAML and JSON agree, and lists
+  the tools through a FastMCP 4 client. It needs no EPR.
+- `demos/mcp_client_demo.py`: new. A FastMCP 4 client lists the tools, creates a
+  receiver and an event, fetches the event, searches for it, and shows a
+  malformed ID being rejected. It starts the server over stdio, or uses
+  `--server-url` for HTTP.
+- `demos/scripts/`: presenter scripts `generate_events_script.md`,
+  `openapi_demo_script.md`, and `mcp_client_demo_script.md` (goal,
+  prerequisites, commands, expected output, talking points, failure recovery,
+  reset) and `run_all.sh`, an unattended rehearsal run that checks
+  prerequisites, stops at the first failure, and supports `--skip-generate`.
+- `demos/requirements.txt` lists `fastmcp`, `httpx2`, and `PyYAML` (it listed
+  `httpx` and `ulid`, while the README said `ulid-py`, and the script called
+  `ulid.ulid()`). `demos/README.md` is rewritten: it had an OpenAPI tool list of
+  `fetchEvent`-style names that the server never had, an MCP client example that
+  used a non-existent API, and said the generator posts 33 events when it
+  posts 44.
+- `Makefile` `lint` and the tox `check` and `format` environments now include
+  `demos/`; `.gitignore` ignores `epr_reports/`, which `--write-to-disk`
+  creates.
+- `tests/demos/test_demos.py`: ULID format and ordering, the 11 receivers and 44
+  events, the dry run (55 curl commands, exit 0), an unreachable EPR (exit 1),
+  `--write-to-disk`, the OpenAPI demo end to end, the client demo helpers, no
+  legacy `httpx` import, `run_all.sh` syntax and option handling, and that every
+  demo has a presenter script and a README entry.
+
+### Phase 4 results
+
+- The 255 tests pass (2 skipped by default) at 88% coverage, and
+  `ruff check src tests demos docs/tutorials/code` is clean.
+- Against the live EPR on macOS: the generator posts 11 receivers and 44 events
+  (exit 0); the client demo passes over stdio and over HTTP; the OpenAPI demo
+  passes; `demos/scripts/run_all.sh` exits 0, and exits 1 with a clear message
+  when EPR is unreachable.
+- On Linux (the `uv` Docker image): `run_all.sh --skip-generate` exits 0 against
+  the same EPR.
+
+### Phase 4 notes
+
+- The shipped tools report most problems (validation, EPR unreachable) as plain
+  text instead of an MCP error result, so the client demo treats a reply that is
+  not JSON as a failure. The workshop server (module 04) uses `ToolError`; the
+  shipped server could be changed to match in a later release.
+- `src/epr_mcp/openapi.yaml`, which the server serves, calls the service the
+  "Event Processing Registry" (it is the Event Provenance Registry) and lists
+  `/search` and `/health` paths that the real EPR does not have; its search is
+  GraphQL. The presenter script tells the presenter not to promise that every
+  listed path exists. Correcting the document is outside this migration.
+- The generator does not post its events to groups, and `--write-to-disk` writes
+  to the current directory.

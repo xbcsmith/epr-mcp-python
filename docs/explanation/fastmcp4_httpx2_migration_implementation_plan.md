@@ -389,9 +389,9 @@ Both the presenter documents and the shell script are required.
 
 #### 4.5 Deliverables
 
-- [ ] Three demos working on FastMCP 4 and `httpx2`
-- [ ] Three presenter scripts plus `run_all.sh`
-- [ ] Updated `demos/README.md` and `requirements.txt`
+- [x] Three demos working on FastMCP 4 and `httpx2`
+- [x] Three presenter scripts plus `run_all.sh`
+- [x] Updated `demos/README.md` and `requirements.txt`
 
 #### 4.6 Success Criteria
 

@@ -1,27 +1,45 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+"""Generate sample CDEvents and event receivers and post them to EPR.
+
+Creates 11 event receivers (one per CDEvent type) and 44 events (4 services times
+11 types), then posts them, prints curl commands, or writes them to disk.
+
+Usage:
+    uv run python demos/generate_epr_events.py --dry-run
+    uv run python demos/generate_epr_events.py --url http://localhost:8042
+    uv run python demos/generate_epr_events.py --write-to-disk
+
+Needs only httpx2. Exits 0 when everything was posted, 1 when any request failed.
+"""
 
 import argparse
 import json
-import re
-import shlex
 import logging
-import sys
 import os
+import secrets
+import shlex
+import sys
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-import httpx
-import ulid
-
+import httpx2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+# httpx2 logs every request at INFO, which buries the demo output.
+logging.getLogger("httpx2").setLevel(logging.WARNING)
+
 
 def debug_except_hook(type, value, tb):
     print(f"epr python hates {type.__name__}")
     print(str(type))
     import pdb
     import traceback
+
     traceback.print_exception(type, value, tb)
     pdb.post_mortem(tb)
 
@@ -29,13 +47,16 @@ def debug_except_hook(type, value, tb):
 debug = os.environ.get("EPR_DEBUG", False)
 if debug:
     sys.excepthook = debug_except_hook
-    logger.setLevel(logging.DEBUG)# Set up logging
+    logger.setLevel(logging.DEBUG)
 
 
+_CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
-# Function to generate a ULID
+
 def generate_ulid() -> str:
-    return str(ulid.ulid())
+    """Generate a ULID: a 48-bit millisecond timestamp plus 80 random bits, in Crockford base32."""
+    value = ((time.time_ns() // 1_000_000) << 80) | secrets.randbits(80)
+    return "".join(_CROCKFORD[(value >> shift) & 31] for shift in range(125, -1, -5))
 
 
 # Function to get current timestamp in ISO format
@@ -87,7 +108,6 @@ def generate_events(evrs: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
     fields commonly required by the included schemas.
     """
     events: List[Dict[str, Any]] = []
-    event_receivers: List[Dict[str, Any]] = []
     names = ["foo", "bar", "baz", "qux"]
     types = [
         "dev.cdevents.pipelinerun.started.0.2.0",
@@ -102,7 +122,7 @@ def generate_events(evrs: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
         "dev.cdevents.service.deployed.0.2.0",
         "dev.cdevents.pipelinerun.finished.0.2.0",
     ]
-    release = datetime.now(timezone.utc).strftime("%Y.%m.%s")
+    release = datetime.now(timezone.utc).strftime("%Y.%m.%d")
     for idx, name in enumerate(names, start=1):
         chain_id = generate_ulid()
         env_id = f"cluster/0{idx}"
@@ -181,7 +201,7 @@ def generate_events(evrs: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
                 subject = {
                     "id": subject_base_id,
                     "type": "build",
-                    "source":  f"https://git.example/{name}.git",
+                    "source": f"https://git.example/{name}.git",
                     "content": {
                         "artifactId": artifact_id,
                     },
@@ -190,20 +210,20 @@ def generate_events(evrs: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
                     subject["content"]["artifactId"] = artifact_id
             elif "testcaserun" in event_type:
                 subject = {
-                            "id": "myTestCaseRun123",
-                            "source":  f"https://git.example/{name}.git",
-                            "type": "testCaseRun",
-                            "content": {
-                                "outcome": "pass",
-                            "environment": {"id": env_id, "source": source},
-                            "testCase": {
-                                "id": generate_ulid(),
-                                "version": "1.0",
-                                "name": f"{name} integration test case",
-                                "type": "integration"
-                            }
-                            }
-                        }
+                    "id": "myTestCaseRun123",
+                    "source": f"https://git.example/{name}.git",
+                    "type": "testCaseRun",
+                    "content": {
+                        "outcome": "pass",
+                        "environment": {"id": env_id, "source": source},
+                        "testCase": {
+                            "id": generate_ulid(),
+                            "version": "1.0",
+                            "name": f"{name} integration test case",
+                            "type": "integration",
+                        },
+                    },
+                }
             elif "testsuiterun" in event_type:
                 subject = {
                     "id": subject_base_id,
@@ -240,52 +260,67 @@ def generate_events(evrs: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
                 subject = {"id": subject_base_id, "type": subject_type, "content": {}}
 
             event_template: Dict[str, Any] = {"context": context, "subject": subject}
-            ev = dict(name=name, version="1.0.0", release=release, platform_id="x64-linux-oci-2", package="oci", description=f"{name} {event_type}", payload=event_template, success=True, event_receiver_id=event_receiver_id)
+            ev = dict(
+                name=name,
+                version="1.0.0",
+                release=release,
+                platform_id="x64-linux-oci-2",
+                package="oci",
+                description=f"{name} {event_type}",
+                payload=event_template,
+                success=True,
+                event_receiver_id=event_receiver_id,
+            )
             # debug output to stdout for visibility when running interactively
             logger.debug(json.dumps(ev, indent=2))
             events.append(ev)
 
     return events
 
+
 def post(url, data, headers=None, timeout=10.0):
     try:
-        with httpx.Client(timeout=timeout) as client:
+        with httpx2.Client(timeout=timeout) as client:
             response = client.post(url, json=data, headers=headers)
             response.raise_for_status()
             return response
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         print(f"HTTP error {e.response.status_code}: {e.response.text}")
         raise
     except Exception as e:
         print(f"Request failed: {e}")
         raise
 
-def post_event_receiver(evr: Dict[str, Any],
+
+def post_event_receiver(
+    evr: Dict[str, Any],
     url: str = "http://localhost:8042",
     timeout: float = 10.0,
-) -> httpx.Response:
+) -> httpx2.Response:
     """
-    Post a single JSON event receiver to the given webhook URL using httpx.
-    Returns the httpx.Response on success, raises on network errors.
+    Post a single JSON event receiver to the given webhook URL using httpx2.
+    Returns the httpx2.Response on success, raises on network errors.
     """
     headers = {"Content-Type": "application/json"}
     endpoint = f"{url}/api/v1/receivers"
     resp = post(endpoint, data=evr, headers=headers, timeout=timeout)
     return resp
 
+
 def post_event(
     event: Dict[str, Any],
     url: str = "http://localhost:8042",
     timeout: float = 10.0,
-) -> httpx.Response:
+) -> httpx2.Response:
     """
-    Post a single JSON event to the given webhook URL using httpx.
-    Returns the httpx.Response on success, raises on network errors.
+    Post a single JSON event to the given webhook URL using httpx2.
+    Returns the httpx2.Response on success, raises on network errors.
     """
     headers = {"Content-Type": "application/json"}
     endpoint = f"{url}/api/v1/events"
     resp = post(endpoint, data=event, headers=headers, timeout=timeout)
     return resp
+
 
 def post_event_receivers(
     evrs: List[Dict[str, Any]],
@@ -299,7 +334,7 @@ def post_event_receivers(
     for evr in evrs:
         try:
             resp = post_event_receiver(evr, url=url, timeout=timeout)
-            data=json.loads(resp.text)
+            data = json.loads(resp.text)
             _id = data.get("data", "<no_id_returned>")
             results[evr["type"]] = dict(status=resp.status_code, data=_id)
         except Exception as e:
@@ -340,7 +375,7 @@ def make_curl_command(event: Dict[str, Any], url: str) -> str:
     return f"curl -sS -X POST -H 'Content-Type: application/json' -d {quoted_payload} {quoted_url}"
 
 
-def main() -> None:
+def main() -> int:
     """
     Generate event_receivers and events and either post them, show curl commands in a dry-run, or write to disk.
     """
@@ -410,7 +445,9 @@ def main() -> None:
             for event in events:
                 curl = make_curl_command(event, f"{url}/api/v1/events")
                 f.write(curl + "\n")
-        print("Wrote curl commands to epr_reports/curl_commands_event_receivers.txt and epr_reports/curl_commands_events.txt")
+        print(
+            "Wrote curl commands to epr_reports/curl_commands_event_receivers.txt and epr_reports/curl_commands_events.txt"
+        )
     if args.dry_run:
         print("Dry run: curl commands for events:")
         for event in events:
@@ -419,13 +456,21 @@ def main() -> None:
     else:
         results = post_events(events, url=url, timeout=timeout)
         success = 0
-        for ev_id, status, resp_text in results:
+        for ev_id, status, _ in results:
             status_str = str(status) if status is not None else "ERROR"
             print(f"{ev_id}: {status_str}")
             if status and 200 <= status < 300:
                 success += 1
         print(f"Posted {success}/{len(results)} events successfully")
+        failed_receivers = [t for t, r in evr_results.items() if r.get("status") is None]
+        if failed_receivers or success != len(results):
+            print(
+                f"{len(failed_receivers)} event receivers and {len(results) - success} events failed",
+                file=sys.stderr,
+            )
+            return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
