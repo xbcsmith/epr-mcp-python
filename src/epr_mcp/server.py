@@ -40,7 +40,18 @@ CREATED_STATUS_CODES = (200, 201)
 
 
 def filter_none_values(data: dict) -> dict:
-    """Filter out None values from a dictionary to avoid sending null values to GraphQL"""
+    """Remove None values from a dictionary so they are not sent as null to GraphQL.
+
+    Args:
+        data: The dictionary to filter.
+
+    Returns:
+        A new dictionary without the keys whose value is None; other falsy values are kept.
+
+    Examples:
+        >>> filter_none_values({"name": "foo", "success": False, "release": None})
+        {'name': 'foo', 'success': False}
+    """
     return {key: value for key, value in data.items() if value is not None}
 
 
@@ -94,7 +105,17 @@ def create_server(cfg: Config) -> FastMCP:
 
     @mcp.tool(title="Fetch Event", description="Fetch an event from EPR")
     async def fetch_event(id: Annotated[str, Field(description="Unique identifier of the event to fetch")]) -> str:
-        """Fetch an event from the EPR"""
+        """Fetch an event from the EPR.
+
+        Args:
+            id: The 26 character ULID of the record.
+
+        Returns:
+            The record as JSON text, or a message describing the failure.
+
+        Examples:
+            ``call_tool("fetch_event", {"id": "01JYRZ96R690ZTQ15Q53GEY6E6"})``
+        """
         try:
             logger.debug(f"Starting fetch_event for ID: {id}")
 
@@ -148,7 +169,17 @@ def create_server(cfg: Config) -> FastMCP:
     async def fetch_receiver(
         id: Annotated[str, Field(description="Unique identifier of the event receiver to fetch")],
     ) -> str:
-        """Fetch an event receiver from the EPR"""
+        """Fetch an event receiver from the EPR.
+
+        Args:
+            id: The 26 character ULID of the record.
+
+        Returns:
+            The record as JSON text, or a message describing the failure.
+
+        Examples:
+            ``call_tool("fetch_receiver", {"id": "01JYRZ96R690ZTQ15Q53GEY6E6"})``
+        """
         try:
             logger.debug(f"Starting fetch_receiver for ID: {id}")
 
@@ -202,7 +233,17 @@ def create_server(cfg: Config) -> FastMCP:
     async def fetch_group(
         id: Annotated[str, Field(description="Unique identifier of the event receiver group to fetch")],
     ) -> str:
-        """Fetch an event receiver group from the EPR"""
+        """Fetch an event receiver group from the EPR.
+
+        Args:
+            id: The 26 character ULID of the record.
+
+        Returns:
+            The record as JSON text, or a message describing the failure.
+
+        Examples:
+            ``call_tool("fetch_group", {"id": "01JYRZ96R690ZTQ15Q53GEY6E6"})``
+        """
         try:
             logger.debug(f"Starting fetch_group for ID: {id}")
 
@@ -261,7 +302,17 @@ def create_server(cfg: Config) -> FastMCP:
             Field(description="Search criteria including name, version, package, platform_id, success status, etc."),
         ],
     ) -> str:
-        """Search for events in the EPR"""
+        """Search for events in the EPR.
+
+        Args:
+            data: Search criteria; any of name, version, release, platform_id, package, description, success, event_receiver_id. Unknown fields are rejected.
+
+        Returns:
+            The matching records as a JSON list, or a message describing the failure.
+
+        Examples:
+            ``call_tool("search_events", {"data": {"name": "foo"}})``
+        """
         try:
             logger.debug(f"Starting search_events with data: {data}")
 
@@ -328,7 +379,17 @@ def create_server(cfg: Config) -> FastMCP:
     async def search_receivers(
         data: Annotated[dict, Field(description="Search criteria including name, type, version, description, etc.")],
     ) -> str:
-        """Search for event receivers in the EPR"""
+        """Search for event receivers in the EPR.
+
+        Args:
+            data: Search criteria; any of name, type, version, description. Unknown fields are rejected.
+
+        Returns:
+            The matching records as a JSON list, or a message describing the failure.
+
+        Examples:
+            ``call_tool("search_receivers", {"data": {"name": "foo"}})``
+        """
         try:
             logger.debug(f"Starting search_receivers with data: {data}")
 
@@ -383,7 +444,17 @@ def create_server(cfg: Config) -> FastMCP:
     async def search_groups(
         data: Annotated[dict, Field(description="Search criteria: any of name, type, version, description")],
     ) -> str:
-        """Search for event receiver groups in the EPR"""
+        """Search for event receiver groups in the EPR.
+
+        Args:
+            data: Search criteria; any of name, type, version, description. Unknown fields are rejected.
+
+        Returns:
+            The matching records as a JSON list, or a message describing the failure.
+
+        Examples:
+            ``call_tool("search_groups", {"data": {"name": "foo"}})``
+        """
         try:
             logger.debug(f"Starting search_groups with data: {data}")
 
@@ -453,7 +524,17 @@ def create_server(cfg: Config) -> FastMCP:
             ),
         ],
     ) -> str:
-        """Create a new event in the EPR"""
+        """Create a new event in the EPR.
+
+        Args:
+            event_data: The fields of the new record: name, version, release, platform_id, package, description, payload, success, event_receiver_id.
+
+        Returns:
+            A JSON message with the ID of the new record, or a message describing the failure.
+
+        Examples:
+            ``call_tool("create_event", {"event_data": {...}})``
+        """
         try:
             logger.debug(f"Starting create_event with data: {event_data}")
 
@@ -522,7 +603,17 @@ def create_server(cfg: Config) -> FastMCP:
             ),
         ],
     ) -> str:
-        """Create a new event receiver in the EPR"""
+        """Create a new event receiver in the EPR.
+
+        Args:
+            receiver_data: The fields of the new record: name, type, version, description, schema.
+
+        Returns:
+            A JSON message with the ID of the new record, or a message describing the failure.
+
+        Examples:
+            ``call_tool("create_receiver", {"receiver_data": {...}})``
+        """
         try:
             logger.debug(f"Starting create_receiver with data: {receiver_data}")
 
@@ -594,7 +685,17 @@ def create_server(cfg: Config) -> FastMCP:
             ),
         ],
     ) -> str:
-        """Create a new event receiver group in the EPR"""
+        """Create a new event receiver group in the EPR.
+
+        Args:
+            group_data: The fields of the new record: name, type, version, description, event_receiver_ids.
+
+        Returns:
+            A JSON message with the ID of the new record, or a message describing the failure.
+
+        Examples:
+            ``call_tool("create_group", {"group_data": {...}})``
+        """
         try:
             logger.debug(f"Starting create_group with data: {group_data}")
 
@@ -661,12 +762,32 @@ def create_server(cfg: Config) -> FastMCP:
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(request: Request) -> PlainTextResponse:
-        """Answer the health check used by Docker and load balancers."""
+        """Answer the health check used by Docker and load balancers.
+
+        Args:
+            request: The incoming HTTP request.
+
+        Returns:
+            A plain text response with the body ``OK``.
+
+        Examples:
+            ``curl http://127.0.0.1:8000/health`` prints ``OK``.
+        """
         return PlainTextResponse("OK")
 
     @mcp.custom_route("/openapi.yaml", methods=["GET"])
     async def openapi_spec_yaml(request: Request):
-        """Serve the OpenAPI specification as YAML"""
+        """Serve the OpenAPI specification as YAML.
+
+        Args:
+            request: The incoming HTTP request.
+
+        Returns:
+            The file, or a 404 JSON error if it is missing.
+
+        Examples:
+            ``curl http://127.0.0.1:8000/openapi.yaml``
+        """
         from starlette.responses import FileResponse
 
         openapi_path = Path(__file__).parent / "openapi.yaml"
@@ -679,7 +800,17 @@ def create_server(cfg: Config) -> FastMCP:
 
     @mcp.custom_route("/openapi.json", methods=["GET"])
     async def openapi_spec_json(request: Request):
-        """Serve the OpenAPI specification as JSON"""
+        """Serve the OpenAPI specification as JSON.
+
+        Args:
+            request: The incoming HTTP request.
+
+        Returns:
+            The document as JSON, or a 404 JSON error if it is missing.
+
+        Examples:
+            ``curl http://127.0.0.1:8000/openapi.json``
+        """
         from starlette.responses import JSONResponse
 
         openapi_path = Path(__file__).parent / "openapi.yaml"
@@ -695,7 +826,17 @@ def create_server(cfg: Config) -> FastMCP:
 
     @mcp.custom_route("/docs", methods=["GET"])
     async def swagger_ui(request: Request):
-        """Serve Swagger UI for API documentation"""
+        """Serve Swagger UI for the API documentation.
+
+        Args:
+            request: The incoming HTTP request.
+
+        Returns:
+            An HTML page that loads ``/openapi.json``.
+
+        Examples:
+            Open ``http://127.0.0.1:8000/docs`` in a browser.
+        """
         from starlette.responses import HTMLResponse
 
         html = f"""
@@ -760,6 +901,10 @@ def run(cfg: Config) -> str:
 
     Raises:
         ValueError: If ``cfg.transport`` is not ``"http"`` or ``"stdio"``.
+
+    Examples:
+        ``run(Config(url="http://localhost:8042", transport="stdio"))`` serves MCP over
+        stdin and stdout until the client disconnects.
     """
     if cfg.transport not in TRANSPORTS:
         raise ValueError(f"Unsupported transport {cfg.transport!r}; expected one of {', '.join(TRANSPORTS)}")

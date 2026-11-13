@@ -35,12 +35,22 @@ EprId = Annotated[str, Field(pattern=r"^[0-9A-Za-z]{26}$", description="26 chara
 
 
 class StrictModel(BaseModel):
-    """Base for tool inputs: unknown fields are errors, not silently dropped."""
+    """Base for tool inputs: unknown fields are errors, not silently dropped.
+
+    Examples:
+        ``class EventSearch(StrictModel): ...``
+    """
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
 
 class EventSearch(StrictModel):
+    """Criteria for searching events; every field is optional.
+
+    Examples:
+        ``EventSearch.model_validate({...})``
+    """
+
     name: str | None = Field(None, description="Event name")
     version: str | None = Field(None, description="Event version")
     release: str | None = Field(None, description="Release")
@@ -52,6 +62,12 @@ class EventSearch(StrictModel):
 
 
 class ReceiverSearch(StrictModel):
+    """Criteria for searching event receivers; every field is optional.
+
+    Examples:
+        ``ReceiverSearch.model_validate({...})``
+    """
+
     name: str | None = Field(None, description="Receiver name")
     type: str | None = Field(None, description="Receiver type")
     version: str | None = Field(None, description="Receiver version")
@@ -59,10 +75,20 @@ class ReceiverSearch(StrictModel):
 
 
 class GroupSearch(ReceiverSearch):
-    """Groups are searched by the same fields as receivers."""
+    """Groups are searched by the same fields as receivers.
+
+    Examples:
+        ``GroupSearch(name='foo')``
+    """
 
 
 class EventCreate(StrictModel):
+    """The fields of a new event.
+
+    Examples:
+        ``EventCreate.model_validate({...})``
+    """
+
     name: str = Field(description="Event name")
     version: str = Field(description="Event version")
     release: str = Field(description="Release")
@@ -75,6 +101,12 @@ class EventCreate(StrictModel):
 
 
 class ReceiverCreate(StrictModel):
+    """The fields of a new event receiver.
+
+    Examples:
+        ``ReceiverCreate.model_validate({...})``
+    """
+
     name: str = Field(description="Receiver name")
     type: str = Field(description="Receiver type")
     version: str = Field(description="Receiver version")
@@ -83,6 +115,12 @@ class ReceiverCreate(StrictModel):
 
 
 class GroupCreate(StrictModel):
+    """The fields of a new event receiver group.
+
+    Examples:
+        ``GroupCreate.model_validate({...})``
+    """
+
     name: str = Field(description="Group name")
     type: str = Field(description="Group type")
     version: str = Field(description="Group version")
@@ -94,13 +132,31 @@ class GroupCreate(StrictModel):
 
 
 def new_client() -> httpx2.AsyncClient:
-    """Create an HTTP client for EPR, with the bearer token when one is set."""
+    """Create an HTTP client for EPR, with the bearer token when one is set.
+
+    Returns:
+        A new ``httpx2.AsyncClient``; use it as an async context manager.
+
+    Examples:
+        ``async with new_client() as client: ...``
+    """
     headers = {"Authorization": f"Bearer {EPR_TOKEN}"} if EPR_TOKEN else {}
     return httpx2.AsyncClient(base_url=EPR_URL, headers=headers)
 
 
 def describe_error(error: Exception, operation: str) -> str:
-    """Turn an httpx2 exception into a message an AI client can act on."""
+    """Turn an httpx2 exception into a message an AI client can act on.
+
+    Args:
+        error: The exception.
+        operation: The tool name.
+
+    Returns:
+        The message.
+
+    Examples:
+        ``describe_error(httpx2.ReadTimeout("slow"), "fetch_event")``
+    """
     if isinstance(error, httpx2.TimeoutException):
         return f"Request to EPR at {EPR_URL} timed out. ({error})"
     if isinstance(error, httpx2.TransportError):
@@ -112,7 +168,23 @@ def describe_error(error: Exception, operation: str) -> str:
 
 
 async def epr_request(operation: str, method: str, path: str, body: Any = None) -> str:
-    """Call EPR and return the body; failures become ToolError, which MCP marks as errors."""
+    """Call EPR and return the body; failures become ToolError, which MCP marks as errors.
+
+    Args:
+        operation: The tool name, used in error messages.
+        method: The HTTP method.
+        path: The API path.
+        body: The JSON body, if any.
+
+    Returns:
+        The response text.
+
+    Raises:
+        ToolError: If EPR cannot be reached, answers with an error status, or reports errors in the body.
+
+    Examples:
+        ``await epr_request("fetch_event", "GET", "/api/v1/events/<id>")``
+    """
     logger.debug("%s: %s %s", operation, method, path)
     try:
         async with new_client() as client:
@@ -156,7 +228,18 @@ SEARCHES = {
 
 
 async def search(operation: str, criteria: BaseModel) -> str:
-    """Run one of the GraphQL searches in SEARCHES, sending only the criteria that were set."""
+    """Run one of the GraphQL searches in SEARCHES.
+
+    Args:
+        operation: A key of SEARCHES.
+        criteria: The search criteria.
+
+    Returns:
+        The GraphQL response as JSON text.
+
+    Examples:
+        ``await search("events", {"name": "foo"})``
+    """
     input_type, argument, fields = SEARCHES[operation]
     query = f"query ($obj: {input_type}){{{operation}({argument}: $obj) {{ {','.join(fields)} }}}}"
     variables = {"obj": criteria.model_dump(exclude_none=True)}
@@ -170,31 +253,81 @@ async def search(operation: str, criteria: BaseModel) -> str:
 
 @mcp.tool(title="Fetch Event", description="Fetch an event from EPR by its ID")
 async def fetch_event(id: EprId) -> str:
-    """Fetch an event from the EPR."""
+    """Fetch an event from the EPR.
+
+    Args:
+        id: The record's ID.
+
+    Returns:
+        The record as JSON text.
+
+    Examples:
+        ``call_tool("fetch_event", {"id": "01JYRZ96R690ZTQ15Q53GEY6E6"})``
+    """
     return await epr_request("fetch_event", "GET", f"/api/v1/events/{id}")
 
 
 @mcp.tool(title="Fetch Event Receiver", description="Fetch an event receiver from EPR by its ID")
 async def fetch_receiver(id: EprId) -> str:
-    """Fetch an event receiver from the EPR."""
+    """Fetch an event receiver from the EPR.
+
+    Args:
+        id: The record's ID.
+
+    Returns:
+        The record as JSON text.
+
+    Examples:
+        ``call_tool("fetch_receiver", {"id": "01JYRZ96R690ZTQ15Q53GEY6E6"})``
+    """
     return await epr_request("fetch_receiver", "GET", f"/api/v1/receivers/{id}")
 
 
 @mcp.tool(title="Fetch Event Receiver Group", description="Fetch an event receiver group from EPR by its ID")
 async def fetch_group(id: EprId) -> str:
-    """Fetch an event receiver group from the EPR."""
+    """Fetch an event receiver group from the EPR.
+
+    Args:
+        id: The record's ID.
+
+    Returns:
+        The record as JSON text.
+
+    Examples:
+        ``call_tool("fetch_group", {"id": "01JYRZ96R690ZTQ15Q53GEY6E6"})``
+    """
     return await epr_request("fetch_group", "GET", f"/api/v1/groups/{id}")
 
 
 @mcp.tool(title="Search Events", description="Search for events; every criterion is optional")
 async def search_events(data: EventSearch) -> str:
-    """Search for events in the EPR."""
+    """Search for events in the EPR.
+
+    Args:
+        data: The search criteria.
+
+    Returns:
+        The matching records as JSON text.
+
+    Examples:
+        ``call_tool("search_events", {"data": {"name": "foo"}})``
+    """
     return await search("events", data)
 
 
 @mcp.tool(title="Search Event Receivers", description="Search for event receivers; every criterion is optional")
 async def search_receivers(data: ReceiverSearch) -> str:
-    """Search for event receivers in the EPR."""
+    """Search for event receivers in the EPR.
+
+    Args:
+        data: The search criteria.
+
+    Returns:
+        The matching records as JSON text.
+
+    Examples:
+        ``call_tool("search_receivers", {"data": {"name": "foo"}})``
+    """
     return await search("event_receivers", data)
 
 
@@ -202,25 +335,65 @@ async def search_receivers(data: ReceiverSearch) -> str:
     title="Search Event Receiver Groups", description="Search for event receiver groups; every criterion is optional"
 )
 async def search_groups(data: GroupSearch) -> str:
-    """Search for event receiver groups in the EPR."""
+    """Search for event receiver groups in the EPR.
+
+    Args:
+        data: The search criteria.
+
+    Returns:
+        The matching records as JSON text.
+
+    Examples:
+        ``call_tool("search_groups", {"data": {"name": "foo"}})``
+    """
     return await search("event_receiver_groups", data)
 
 
 @mcp.tool(title="Create Event", description="Create a new event in EPR")
 async def create_event(event_data: EventCreate) -> str:
-    """Create a new event in the EPR."""
+    """Create an event in the EPR.
+
+    Args:
+        event_data: The fields of the new record.
+
+    Returns:
+        EPR's answer, which holds the new ID.
+
+    Examples:
+        ``call_tool("create_event", {"event_data": {...}})``
+    """
     return await epr_request("create_event", "POST", "/api/v1/events", event_data.model_dump())
 
 
 @mcp.tool(title="Create Event Receiver", description="Create a new event receiver in EPR")
 async def create_receiver(receiver_data: ReceiverCreate) -> str:
-    """Create a new event receiver in the EPR."""
+    """Create an event receiver in the EPR.
+
+    Args:
+        receiver_data: The fields of the new record.
+
+    Returns:
+        EPR's answer, which holds the new ID.
+
+    Examples:
+        ``call_tool("create_receiver", {"receiver_data": {...}})``
+    """
     return await epr_request("create_receiver", "POST", "/api/v1/receivers", receiver_data.model_dump(by_alias=True))
 
 
 @mcp.tool(title="Create Event Receiver Group", description="Create a new event receiver group in EPR")
 async def create_group(group_data: GroupCreate) -> str:
-    """Create a new event receiver group in the EPR."""
+    """Create an event receiver group in the EPR.
+
+    Args:
+        group_data: The fields of the new record.
+
+    Returns:
+        EPR's answer, which holds the new ID.
+
+    Examples:
+        ``call_tool("create_group", {"group_data": {...}})``
+    """
     return await epr_request("create_group", "POST", "/api/v1/groups", group_data.model_dump())
 
 

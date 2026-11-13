@@ -35,6 +35,16 @@ failures = 0
 
 
 def report(status: str, name: str, detail: str = "") -> None:
+    """Print one result line and count failures.
+
+    Args:
+        status: PASS, FAIL, or SKIP.
+        name: What was checked.
+        detail: Optional extra text.
+
+    Examples:
+        ``report('PASS', 'Python 3.12 or newer', '3.12.11')``
+    """
     global failures
     if status == "FAIL":
         failures += 1
@@ -42,11 +52,24 @@ def report(status: str, name: str, detail: str = "") -> None:
 
 
 def check_python() -> None:
+    """Check that Python is 3.12 or newer.
+
+    Examples:
+        ``check_python()``
+    """
     ok = sys.version_info >= (3, 12)
     report("PASS" if ok else "FAIL", "Python 3.12 or newer", sys.version.split()[0])
 
 
 def check_uv() -> str | None:
+    """Check that uv is on PATH.
+
+    Returns:
+        The path to uv, or None if it is missing.
+
+    Examples:
+        ``uv = check_uv()``
+    """
     uv = shutil.which("uv")
     if not uv:
         report("FAIL", "uv on PATH", "install from https://docs.astral.sh/uv/")
@@ -57,6 +80,11 @@ def check_uv() -> str | None:
 
 
 def check_epr() -> None:
+    """Check that EPR answers its readiness endpoint.
+
+    Examples:
+        ``check_epr()``
+    """
     try:
         response = httpx2.get(f"{EPR_URL}/healthz/readiness", timeout=5)
     except httpx2.HTTPError as error:
@@ -67,12 +95,27 @@ def check_epr() -> None:
 
 
 async def list_tools(transport: StdioTransport) -> list[str]:
+    """Start a server over stdio and list its tools.
+
+    Args:
+        transport: The stdio transport that starts the server.
+
+    Returns:
+        The tool names.
+
+    Examples:
+        ``asyncio.run(list_tools(StdioTransport(command='python', args=['server.py'])))``
+    """
     async with Client(transport, timeout=STDIO_TIMEOUT) as client:
         return [tool.name for tool in await client.list_tools()]
 
 
 def check_in_process() -> None:
-    """Start each checkpoint with the current Python and count its tools."""
+    """Start each checkpoint with the current Python and count its tools.
+
+    Examples:
+        ``check_in_process()``
+    """
     servers = {name: (CODE_DIR / name / "server.py", count) for name, count in CHECKPOINTS.items()}
     servers["work (your server)"] = (CODE_DIR / "work" / "server.py", None)
     for name, (server, expected) in servers.items():
@@ -92,7 +135,14 @@ def check_in_process() -> None:
 
 
 def check_editor_launch(uv: str) -> None:
-    """Start servers with the exact commands the editor configs use."""
+    """Start servers with the exact commands the editor configs use.
+
+    Args:
+        uv: The path to uv.
+
+    Examples:
+        ``check_editor_launch('/usr/local/bin/uv')``
+    """
     env = {**os.environ, "EPR_URL": EPR_URL}
     launches = {
         f"workshop server ({FINAL_CHECKPOINT}) via uv run": (
@@ -120,6 +170,14 @@ def check_editor_launch(uv: str) -> None:
 
 
 def main() -> int:
+    """Run all checks and print a summary.
+
+    Returns:
+        0 if every check passed or was skipped, 1 if any failed.
+
+    Examples:
+        ``uv run python check_setup.py --skip-stdio``
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--skip-stdio", action="store_true", help="skip the uv run editor-launch checks")
     args = parser.parse_args()

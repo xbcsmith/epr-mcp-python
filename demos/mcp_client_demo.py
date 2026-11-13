@@ -34,14 +34,40 @@ TOTAL_STEPS = 6
 
 
 class DemoError(Exception):
-    """A step of the demo did not work."""
+    """Raised when a step of the demo does not work.
+
+    Examples:
+        ``raise DemoError('expected 9 tools, found 8')``
+    """
 
 
 def step(number: int, title: str) -> None:
+    """Print a numbered step heading.
+
+    Args:
+        number: The step number.
+        title: What the step does.
+
+    Examples:
+        ``step(1, 'List the tools the server offers')``
+    """
     print(f"\n[{number}/{TOTAL_STEPS}] {title}")
 
 
 def shorten(text: str, width: int = 100) -> str:
+    """Collapse whitespace and truncate text to a width.
+
+    Args:
+        text: The text to shorten.
+        width: The maximum length, including the trailing ``...``.
+
+    Returns:
+        The shortened text.
+
+    Examples:
+        >>> shorten("a  b   c")
+        'a b c'
+    """
     text = " ".join(text.split())
     return text if len(text) <= width else text[: width - 3] + "..."
 
@@ -51,6 +77,21 @@ async def call(client: Client, tool: str, arguments: dict, expect_error: bool = 
 
     The server reports most problems as plain text instead of an MCP error, so a reply
     that is not JSON counts as a failure unless the caller expects one.
+
+    Args:
+        client: The connected MCP client.
+        tool: The tool name.
+        arguments: The tool arguments.
+        expect_error: True when a non-JSON reply is the expected outcome.
+
+    Returns:
+        The text of the tool's reply.
+
+    Raises:
+        DemoError: If the call fails or the reply is not JSON and no error was expected.
+
+    Examples:
+        ``await call(client, 'fetch_event', {'id': event_id})``
     """
     print(f"  tool: {tool}")
     print(f"  arguments: {shorten(json.dumps(arguments), 140)}")
@@ -65,6 +106,17 @@ async def call(client: Client, tool: str, arguments: dict, expect_error: bool = 
 
 
 def make_client(args: argparse.Namespace) -> Client:
+    """Create the MCP client: over HTTP for --server-url, otherwise over stdio to a server it starts.
+
+    Args:
+        args: The parsed command line.
+
+    Returns:
+        An unconnected FastMCP client.
+
+    Examples:
+        ``async with make_client(args) as client: ...``
+    """
     if args.server_url:
         return Client(args.server_url)
     env = {**os.environ, "EPR_URL": args.epr_url}
@@ -78,6 +130,17 @@ def make_client(args: argparse.Namespace) -> Client:
 
 
 async def run(args: argparse.Namespace) -> None:
+    """Run the six demo steps.
+
+    Args:
+        args: The parsed command line.
+
+    Raises:
+        DemoError: If any step does not work.
+
+    Examples:
+        ``asyncio.run(run(args))``
+    """
     suffix = str(int(time.time()))
     receiver = {
         "name": f"demo.client.{suffix}",
@@ -131,6 +194,14 @@ async def run(args: argparse.Namespace) -> None:
 
 
 def main() -> int:
+    """Parse the command line and run the demo.
+
+    Returns:
+        0 if every step worked, 1 otherwise.
+
+    Examples:
+        ``python demos/mcp_client_demo.py --epr-url http://localhost:8042``
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--epr-url", default=os.environ.get("EPR_URL", "http://localhost:8042"), help="EPR URL")
     parser.add_argument("--server-url", help="MCP server over HTTP, for example http://localhost:8000/mcp")

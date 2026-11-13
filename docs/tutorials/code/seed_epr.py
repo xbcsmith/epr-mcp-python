@@ -41,13 +41,36 @@ EVENTS = [
 
 
 def create(client: httpx2.Client, path: str, body: dict) -> str:
-    """POST a record and return the new ID."""
+    """POST a record and return the new ID.
+
+    Args:
+        client: An httpx2 client with EPR's base URL.
+        path: The API path, such as /api/v1/receivers.
+        body: The JSON body.
+
+    Returns:
+        The new record's ID.
+
+    Raises:
+        httpx2.HTTPStatusError: If EPR answers with an error status.
+
+    Examples:
+        ``create(client, '/api/v1/receivers', receiver)``
+    """
     response = client.post(path, json=body)
     response.raise_for_status()
     return response.json()["data"]
 
 
 def main() -> int:
+    """Create a receiver, a group, and three events, and save their IDs.
+
+    Returns:
+        0 on success, 1 if EPR cannot be reached or rejects a record.
+
+    Examples:
+        ``uv run python seed_epr.py``
+    """
     try:
         with httpx2.Client(base_url=EPR_URL, timeout=10) as client:
             receiver_id = create(client, "/api/v1/receivers", RECEIVER)

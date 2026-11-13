@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
 """Tests for the HTTP routes served next to the MCP endpoint."""
 
 from pathlib import Path
@@ -12,33 +15,41 @@ from epr_mcp.config import Config
 
 @pytest.fixture
 def client():
+    """Provide a Starlette test client for the server's HTTP app."""
     mcp = server.create_server(Config(url="http://epr.test"))
     with TestClient(mcp.http_app()) as test_client:
         yield test_client
 
 
 class TestRoutes:
+    """Tests for the HTTP routes next to the MCP endpoint."""
+
     def test_health(self, client):
+        """Test health."""
         response = client.get("/health")
         assert response.status_code == 200
         assert response.text == "OK"
 
     def test_openapi_yaml(self, client):
+        """Test openapi yaml."""
         response = client.get("/openapi.yaml")
         assert response.status_code == 200
         assert yaml.safe_load(response.text)["openapi"].startswith("3.")
 
     def test_openapi_json_matches_yaml(self, client):
+        """Test openapi json matches yaml."""
         spec = client.get("/openapi.json").json()
         assert spec == yaml.safe_load(client.get("/openapi.yaml").text)
 
     def test_docs_points_at_openapi_json(self, client):
+        """Test docs points at openapi json."""
         response = client.get("/docs")
         assert response.status_code == 200
         assert "swagger-ui" in response.text
         assert "/openapi.json" in response.text
 
     def test_missing_spec_returns_404(self, client, monkeypatch):
+        """Test missing spec returns 404."""
         monkeypatch.setattr(Path, "exists", lambda self: False)
         assert client.get("/openapi.yaml").status_code == 404
         assert client.get("/openapi.json").status_code == 404

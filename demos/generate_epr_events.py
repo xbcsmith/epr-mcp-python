@@ -35,6 +35,16 @@ logging.getLogger("httpx2").setLevel(logging.WARNING)
 
 
 def debug_except_hook(type, value, tb):
+    """Print an uncaught exception and open a post-mortem debugger.
+
+    Args:
+        type: The exception class.
+        value: The exception instance.
+        tb: The traceback.
+
+    Examples:
+        ``sys.excepthook = debug_except_hook`` (installed when EPR_DEBUG is set).
+    """
     print(f"epr python hates {type.__name__}")
     print(str(type))
     import pdb
@@ -54,18 +64,46 @@ _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 
 def generate_ulid() -> str:
-    """Generate a ULID: a 48-bit millisecond timestamp plus 80 random bits, in Crockford base32."""
+    """Generate a ULID: a 48-bit millisecond timestamp plus 80 random bits, in Crockford base32.
+
+    Returns:
+        A 26 character ULID that sorts by creation time.
+
+    Examples:
+        >>> len(generate_ulid())
+        26
+    """
     value = ((time.time_ns() // 1_000_000) << 80) | secrets.randbits(80)
     return "".join(_CROCKFORD[(value >> shift) & 31] for shift in range(125, -1, -5))
 
 
 # Function to get current timestamp in ISO format
 def get_current_timestamp() -> str:
+    """Get the current UTC time in ISO 8601 format.
+
+    Returns:
+        A timestamp such as ``2025-10-06T14:30:00.123456Z``.
+
+    Examples:
+        >>> get_current_timestamp().endswith("Z")
+        True
+    """
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def gen_sha(seed: str) -> str:
-    """Generate a fake sha256 hash from a seed string."""
+    """Generate a fake SHA-256 hash from a seed string.
+
+    Args:
+        seed: The text to hash.
+
+    Returns:
+        The 64 character hex digest.
+
+    Examples:
+        >>> len(gen_sha("foo"))
+        64
+    """
     import hashlib
 
     h = hashlib.sha256()
@@ -74,8 +112,14 @@ def gen_sha(seed: str) -> str:
 
 
 def generate_event_receivers() -> List[Dict[str, Any]]:
-    """
-    Generate a list of event receivers for each supported event type.
+    """Generate one event receiver for each supported CDEvents type.
+
+    Returns:
+        Eleven receiver dictionaries, each with name, version, description, type, and an empty schema.
+
+    Examples:
+        >>> len(generate_event_receivers())
+        11
     """
     event_receivers: List[Dict[str, Any]] = []
     types = [
@@ -102,10 +146,17 @@ def generate_event_receivers() -> List[Dict[str, Any]]:
 
 # Generate a series of CDEvents for different services and event types
 def generate_events(evrs: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Generate a CDEvent of each supported type for each service name.
-    Ensures each generated event has unique ids/timestamps and includes
-    fields commonly required by the included schemas.
+    """Generate one CDEvent of each supported type for each of four service names.
+
+    Args:
+        evrs: The posted receivers, keyed by CDEvents type, as returned by post_event_receivers; use an empty dictionary for a dry run.
+
+    Returns:
+        Forty-four event dictionaries that each point at their receiver's ID (a placeholder in a dry run).
+
+    Examples:
+        >>> len(generate_events({}))
+        44
     """
     events: List[Dict[str, Any]] = []
     names = ["foo", "bar", "baz", "qux"]
@@ -279,6 +330,24 @@ def generate_events(evrs: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def post(url, data, headers=None, timeout=10.0):
+    """Post JSON to a URL and raise on any failure.
+
+    Args:
+        url: The full URL.
+        data: The JSON body.
+        headers: Optional request headers.
+        timeout: Seconds to wait for a response.
+
+    Returns:
+        The successful response.
+
+    Raises:
+        httpx2.HTTPStatusError: If EPR answers with an error status.
+        httpx2.HTTPError: If the request cannot be completed.
+
+    Examples:
+        ``post('http://localhost:8042/api/v1/events', event)``
+    """
     try:
         with httpx2.Client(timeout=timeout) as client:
             response = client.post(url, json=data, headers=headers)
@@ -297,9 +366,21 @@ def post_event_receiver(
     url: str = "http://localhost:8042",
     timeout: float = 10.0,
 ) -> httpx2.Response:
-    """
-    Post a single JSON event receiver to the given webhook URL using httpx2.
-    Returns the httpx2.Response on success, raises on network errors.
+    """Post one event receiver to EPR.
+
+    Args:
+        evr: The receiver dictionary.
+        url: The EPR base URL.
+        timeout: Seconds to wait for a response.
+
+    Returns:
+        The successful response.
+
+    Raises:
+        httpx2.HTTPError: If the request fails or EPR answers with an error status.
+
+    Examples:
+        ``post_event_receiver(evr, url='http://localhost:8042')``
     """
     headers = {"Content-Type": "application/json"}
     endpoint = f"{url}/api/v1/receivers"
@@ -312,9 +393,21 @@ def post_event(
     url: str = "http://localhost:8042",
     timeout: float = 10.0,
 ) -> httpx2.Response:
-    """
-    Post a single JSON event to the given webhook URL using httpx2.
-    Returns the httpx2.Response on success, raises on network errors.
+    """Post one event to EPR.
+
+    Args:
+        event: The event dictionary.
+        url: The EPR base URL.
+        timeout: Seconds to wait for a response.
+
+    Returns:
+        The successful response.
+
+    Raises:
+        httpx2.HTTPError: If the request fails or EPR answers with an error status.
+
+    Examples:
+        ``post_event(event, url='http://localhost:8042')``
     """
     headers = {"Content-Type": "application/json"}
     endpoint = f"{url}/api/v1/events"
@@ -327,8 +420,18 @@ def post_event_receivers(
     url: str = "http://localhost:8042",
     timeout: float = 10.0,
 ) -> Dict[str, Dict[str, Any]]:
-    """
-    Post a list of event receivers sequentially. Returns a list of (evr_id, status_code, response_text).
+    """Post event receivers one after another.
+
+    Args:
+        evrs: The receiver dictionaries.
+        url: The EPR base URL.
+        timeout: Seconds to wait for each response.
+
+    Returns:
+        A dictionary keyed by receiver type; each value has ``status`` (None on failure) and ``data`` (the new ID, or the error).
+
+    Examples:
+        ``post_event_receivers(generate_event_receivers())``
     """
     results: Dict[str, Dict[str, Any]] = {}
     for evr in evrs:
@@ -347,8 +450,18 @@ def post_events(
     url: str = "http://localhost:8042",
     timeout: float = 10.0,
 ) -> List[Tuple[Optional[str], Optional[int], str]]:
-    """
-    Post a list of events sequentially. Returns a list of (event_id, status_code, response_text).
+    """Post events one after another; a failure is logged and recorded, not raised.
+
+    Args:
+        events: The event dictionaries.
+        url: The EPR base URL.
+        timeout: Seconds to wait for each response.
+
+    Returns:
+        A list of ``(event_id, status_code, response_text)`` tuples; the first two are None for a failed post.
+
+    Examples:
+        ``post_events(generate_events(receivers))``
     """
     results: List[Tuple[Optional[str], Optional[int], str]] = []
     for ev in events:
@@ -364,9 +477,18 @@ def post_events(
 
 
 def make_curl_command(event: Dict[str, Any], url: str) -> str:
-    """
-    Build a curl command that posts the given event to url.
-    The JSON payload is shell-quoted.
+    """Build a curl command that posts the payload to a URL.
+
+    Args:
+        event: The JSON payload; it is shell-quoted.
+        url: The URL to post to.
+
+    Returns:
+        The command line as a string.
+
+    Examples:
+        >>> make_curl_command({"a": 1}, "http://epr/x").startswith("curl -sS -X POST")
+        True
     """
     # compact JSON to keep command shorter
     json_str = json.dumps(event, separators=(",", ":"), ensure_ascii=False)
@@ -376,8 +498,13 @@ def make_curl_command(event: Dict[str, Any], url: str) -> str:
 
 
 def main() -> int:
-    """
-    Generate event_receivers and events and either post them, show curl commands in a dry-run, or write to disk.
+    """Generate receivers and events, then post them, print curl commands, or write files.
+
+    Returns:
+        0 if everything was posted (or a dry run or file write succeeded), 1 if any request failed.
+
+    Examples:
+        ``python demos/generate_epr_events.py --dry-run``
     """
     parser = argparse.ArgumentParser(
         description="Generate and post EPR event_receivers and events, print curl commands (dry-run), or write to disk."

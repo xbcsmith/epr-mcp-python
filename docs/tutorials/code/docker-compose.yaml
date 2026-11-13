@@ -12,6 +12,7 @@
 # three minutes the first time, cached afterwards). To skip the build, for
 # example on a slow venue network, load an image the facilitator prepared with
 # `docker load` and set EPR_IMAGE to its name.
+---
 name: epr-workshop
 
 services:

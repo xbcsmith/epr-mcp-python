@@ -15,7 +15,17 @@ mcp = FastMCP(name="EPR Workshop MCP Server", version="0.1.0")
 
 @mcp.tool(title="Fetch Event", description="Fetch an event from EPR by its ID")
 async def fetch_event(id: str) -> str:
-    """Fetch an event from the EPR."""
+    """Fetch an event from the EPR.
+
+    Args:
+        id: The event's ID.
+
+    Returns:
+        The event as JSON text.
+
+    Examples:
+        ``call_tool("fetch_event", {"id": "01JYRZ96R690ZTQ15Q53GEY6E6"})``
+    """
     async with httpx2.AsyncClient() as client:
         response = await client.get(f"{EPR_URL}/api/v1/events/{id}")
         return response.text

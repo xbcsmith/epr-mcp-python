@@ -38,12 +38,14 @@ def epr(monkeypatch):
 
 
 async def call(tool, arguments, raise_on_error=True):
+    """Call a tool through an in-memory client."""
     async with Client(server.mcp) as client:
         return await client.call_tool(tool, arguments, raise_on_error=raise_on_error)
 
 
 @pytest.mark.asyncio
 async def test_server_lists_nine_tools():
+    """Test server lists nine tools."""
     async with Client(server.mcp) as client:
         names = {tool.name for tool in await client.list_tools()}
     assert names == {
@@ -61,6 +63,7 @@ async def test_server_lists_nine_tools():
 
 @pytest.mark.asyncio
 async def test_fetch_event_returns_epr_body(epr):
+    """Test fetch event returns epr body."""
     result = await call("fetch_event", {"id": EPR_ID})
     assert json.loads(result.content[0].text)["data"]["id"] == EPR_ID
     assert epr["requests"][0].url.path == f"/api/v1/events/{EPR_ID}"
@@ -68,6 +71,7 @@ async def test_fetch_event_returns_epr_body(epr):
 
 @pytest.mark.asyncio
 async def test_fetch_event_rejects_a_malformed_id_without_calling_epr(epr):
+    """Test fetch event rejects a malformed id without calling epr."""
     result = await call("fetch_event", {"id": "not-an-id"}, raise_on_error=False)
     assert result.is_error
     assert epr["requests"] == []
@@ -75,6 +79,7 @@ async def test_fetch_event_rejects_a_malformed_id_without_calling_epr(epr):
 
 @pytest.mark.asyncio
 async def test_search_sends_only_the_criteria_that_were_set(epr):
+    """Test search sends only the criteria that were set."""
     epr["respond"] = lambda request: httpx2.Response(200, json={"data": {"events": []}})
     await call("search_events", {"data": {"name": "checkout-service"}})
     body = json.loads(epr["requests"][0].content)
@@ -83,6 +88,7 @@ async def test_search_sends_only_the_criteria_that_were_set(epr):
 
 @pytest.mark.asyncio
 async def test_search_rejects_unknown_criteria(epr):
+    """Test search rejects unknown criteria."""
     result = await call("search_events", {"data": {"nmae": "typo"}}, raise_on_error=False)
     assert result.is_error
     assert epr["requests"] == []
@@ -90,6 +96,7 @@ async def test_search_rejects_unknown_criteria(epr):
 
 @pytest.mark.asyncio
 async def test_create_receiver_sends_schema_under_its_epr_name(epr):
+    """Test create receiver sends schema under its epr name."""
     epr["respond"] = lambda request: httpx2.Response(201, json={"data": EPR_ID})
     receiver = {
         "name": "workshop.build",
@@ -104,6 +111,7 @@ async def test_create_receiver_sends_schema_under_its_epr_name(epr):
 
 @pytest.mark.asyncio
 async def test_epr_error_status_becomes_a_tool_error(epr):
+    """Test epr error status becomes a tool error."""
     epr["respond"] = lambda request: httpx2.Response(404, text="not found")
     result = await call("fetch_event", {"id": EPR_ID}, raise_on_error=False)
     assert result.is_error
@@ -112,6 +120,7 @@ async def test_epr_error_status_becomes_a_tool_error(epr):
 
 @pytest.mark.asyncio
 async def test_epr_error_in_a_200_body_becomes_a_tool_error(epr):
+    """Test epr error in a 200 body becomes a tool error."""
     epr["respond"] = lambda request: httpx2.Response(200, json={"data": None, "errors": ["event not found"]})
     result = await call("fetch_event", {"id": EPR_ID}, raise_on_error=False)
     assert result.is_error
@@ -120,6 +129,8 @@ async def test_epr_error_in_a_200_body_becomes_a_tool_error(epr):
 
 @pytest.mark.asyncio
 async def test_dropped_connection_is_reported_with_its_error_name(epr):
+    """Test dropped connection is reported with its error name."""
+
     def drop(request):
         raise httpx2.RemoteProtocolError("", request=request)
 
@@ -131,6 +142,8 @@ async def test_dropped_connection_is_reported_with_its_error_name(epr):
 
 @pytest.mark.asyncio
 async def test_unreachable_epr_says_so(epr):
+    """Test unreachable epr says so."""
+
     def refuse(request):
         raise httpx2.ConnectError("refused", request=request)
 
@@ -142,5 +155,6 @@ async def test_unreachable_epr_says_so(epr):
 
 @pytest.mark.asyncio
 async def test_bearer_token_is_sent_when_configured(monkeypatch):
+    """Test bearer token is sent when configured."""
     monkeypatch.setattr(server, "EPR_TOKEN", "secret")
     assert server.new_client().headers["Authorization"] == "Bearer secret"

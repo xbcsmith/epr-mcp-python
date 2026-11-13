@@ -45,8 +45,16 @@ class CmdLine(object):
         getattr(self, args.command)()
 
     def start(self):
-        """
-        start the EPR MCP server
+        """Start the EPR MCP server.
+
+        Reads --url, --token, --transport, --host, --port, and --debug from
+        ``sys.argv`` (environment variables supply the defaults) and runs the server.
+
+        Returns:
+            The status message from ``server.run`` after the server stops.
+
+        Examples:
+            From a shell: ``eprmcp start --transport http --host 127.0.0.1 --port 8000``
         """
         parser = argparse.ArgumentParser(description="start the EPR MCP Server\n")
         parser.add_argument(
@@ -109,14 +117,23 @@ class CmdLine(object):
         return server.run(cfg)
 
     def version(self):
-        """
-        Prints version of epr-mcp
+        """Print the name and version of epr-mcp.
+
+        Examples:
+            From a shell: ``eprmcp version`` prints the package name, then the version.
         """
         print(constants.info())
 
 
 def main():
-    """Entry point for the ``eprmcp`` command."""
+    """Entry point for the ``eprmcp`` command.
+
+    Reads the command from ``sys.argv`` and runs it; exits with status 1 on an
+    unknown command.
+
+    Examples:
+        From a shell: ``eprmcp start --transport stdio --url http://localhost:8042``
+    """
     CmdLine()
 
 

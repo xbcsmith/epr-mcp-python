@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
 """Tests for the eprmcp command line."""
 
 from unittest import mock
@@ -8,6 +11,7 @@ from epr_mcp import main
 
 
 def start(monkeypatch, *args, env=None):
+    """Run ``eprmcp start`` with the arguments and environment, and return the Config it built."""
     for key in ("EPR_URL", "EPR_API_TOKEN", "EPR_TOKEN", "MCP_TRANSPORT", "MCP_HOST", "MCP_PORT"):
         monkeypatch.delenv(key, raising=False)
     for key, value in (env or {}).items():
@@ -19,7 +23,10 @@ def start(monkeypatch, *args, env=None):
 
 
 class TestStart:
+    """Tests for the start command's options and environment variables."""
+
     def test_defaults(self, monkeypatch):
+        """Test defaults."""
         cfg = start(monkeypatch)
         assert (cfg.url, cfg.token, cfg.transport, cfg.host, cfg.port) == (
             "http://localhost:8042",
@@ -30,6 +37,7 @@ class TestStart:
         )
 
     def test_flags(self, monkeypatch):
+        """Test flags."""
         cfg = start(
             monkeypatch,
             "--url", "http://epr:1",
@@ -49,6 +57,7 @@ class TestStart:
         )
 
     def test_environment_defaults(self, monkeypatch):
+        """Test environment defaults."""
         cfg = start(
             monkeypatch,
             env={"EPR_URL": "http://e:2", "MCP_TRANSPORT": "stdio", "MCP_HOST": "1.2.3.4", "MCP_PORT": "7"},
@@ -57,20 +66,24 @@ class TestStart:
 
     @pytest.mark.parametrize("variable", ["EPR_API_TOKEN", "EPR_TOKEN"])
     def test_token_from_either_environment_variable(self, monkeypatch, variable):
+        """Test token from either environment variable."""
         assert start(monkeypatch, env={variable: "abc"}).token == "abc"
 
     def test_invalid_transport_exits(self, monkeypatch):
+        """Test invalid transport exits."""
         with pytest.raises(SystemExit):
             start(monkeypatch, "--transport", "sse")
 
 
 def test_unknown_command_exits(monkeypatch):
+    """Test unknown command exits."""
     monkeypatch.setattr("sys.argv", ["eprmcp", "bogus"])
     with pytest.raises(SystemExit):
         main.main()
 
 
 def test_version_prints(monkeypatch, capsys):
+    """Test version prints."""
     monkeypatch.setattr("sys.argv", ["eprmcp", "version"])
     main.main()
     assert "epr-mcp" in capsys.readouterr().out

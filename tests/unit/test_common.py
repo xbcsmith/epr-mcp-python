@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
 """Unit tests for epr_mcp.common module."""
 
 import pytest  # type: ignore

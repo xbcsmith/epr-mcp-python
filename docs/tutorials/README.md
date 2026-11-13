@@ -49,22 +49,39 @@ docs/tutorials/code/
   seed_epr.py                creates sample data in EPR
   check_setup.py             preflight check
   client.py                  terminal MCP client, the editor-free fallback
+  starter_01_first_tool/     beginning-of-module-01 scaffold (no tools yet)
   checkpoint_01_first_tool/  finished code at the end of module 01
+  starter_03_tool_set/       beginning-of-module-03 state (fetch_event only)
   checkpoint_03_tool_set/    finished code at the end of module 03
+  starter_04_validation/     beginning-of-module-04 state (dict-based tools)
   checkpoint_04_validation/  finished code at the end of module 04
-  checkpoint_05_tests/       module 04 server plus its tests
+  starter_05_tests/          beginning-of-module-05 state (server + test skeleton)
+  checkpoint_05_tests/       module 04 server plus its full test suite
   .vscode/mcp.json           VS Code server configuration
   claude_desktop_config.json Claude Desktop server configuration
   work/                      your own code (you create it, git ignores it)
 ```
 
 All commands in the modules run from `docs/tutorials/code` unless they say
-otherwise.
+otherwise. The code listings in the modules leave out the longer docstrings that
+the checkpoint files carry, so read the checkpoint file for the full version.
+
+## Starting a module from a known state
+
+Starters hold the beginning-of-module state so you can join mid-workshop or
+resync without carrying any work from a previous session.
+
+| Starting module | Copy this                                           |
+| --------------- | --------------------------------------------------- |
+| Module 01       | `cp starter_01_first_tool/server.py work/server.py` |
+| Module 03       | `cp starter_03_tool_set/server.py work/server.py`   |
+| Module 04       | `cp starter_04_validation/server.py work/server.py` |
+| Module 05       | `cp -r starter_05_tests/. work/`                    |
 
 ## Stuck? Jump to a checkpoint
 
-Each checkpoint holds the finished code for a module. Copy it into `work/` and
-carry on.
+Checkpoints hold the finished code for a module. Copy one into `work/` to pick
+up where the solution left off.
 
 | You are stuck in | Copy this                                              |
 | ---------------- | ------------------------------------------------------ |

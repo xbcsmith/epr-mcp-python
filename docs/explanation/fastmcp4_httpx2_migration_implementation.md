@@ -8,14 +8,14 @@ phase by phase; the plan it followed is
 
 ## Overview
 
-| Area         | Result                                                                                                                           |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| Dependencies | `fastmcp>=4.0,<5`, `httpx2>=2.13`, `pydantic>=2.12`, `starlette>=1.0`; legacy `httpx` is gone                                    |
-| Server       | `create_server(cfg)` plus `run(cfg)`; `stdio` and `http` transports; flat tool arguments; nine tools verified against a live EPR |
-| Packaging    | `py3-none-any` wheel that includes `openapi.yaml`; SPDX license metadata; Dockerfile installs the wheel by glob                  |
-| Workshop     | Eight modules, four checkpoints, an EPR-only compose file, a preflight, and a terminal client                                    |
-| Demos        | Three demos, three presenter scripts, and `run_all.sh`                                                                           |
-| Quality      | 255 tests pass (2 functional tests skipped by default), 88% coverage, `ruff` clean, all markdown lint-clean                      |
+| Area         | Result                                                                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dependencies | `fastmcp>=4.0,<5`, `httpx2>=2.13`, `pydantic>=2.12`, `starlette>=1.0`; legacy `httpx` is gone                                                     |
+| Server       | `create_server(cfg)` plus `run(cfg)`; `stdio` and `http` transports; flat tool arguments; nine tools verified against a live EPR                  |
+| Packaging    | `py3-none-any` wheel that includes `openapi.yaml`; SPDX license metadata; Dockerfile installs the wheel by glob                                   |
+| Workshop     | Eight modules, four checkpoints, an EPR-only compose file, a preflight, and a terminal client                                                     |
+| Demos        | Three demos, three presenter scripts, and `run_all.sh`                                                                                            |
+| Quality      | 316 tests pass (2 functional tests skipped by default and passing when enabled), 94% coverage, 41 doctests, `ruff` clean, all markdown lint-clean |
 
 The release is version 2.0.0 because behavior changes (see the 2.0 notes in the
 README); the version bump itself is a post-merge step (see the release
@@ -476,9 +476,8 @@ Unit tests were added for items 2 to 5 (`TestAgainstRealEprBehavior` and
   `license-files`, the deprecated license classifier is gone, and setuptools
   `>=77` is required. The build had warned that `project.license` as a table
   stops being supported on 2027-02-18.
-- Docstrings (with Args, Returns, and an example where useful) were added to the
-  15 public functions and classes that lacked them, and the examples run as
-  doctests (`pytest --doctest-modules --import-mode=importlib src/epr_mcp`).
+- Docstrings were added to 15 public functions and classes that lacked them; the
+  completeness audit below finished the job for every public item.
 
 ### Phase 5 verification
 
@@ -539,6 +538,34 @@ Rehearse the demos against a live EPR:
 (cd docs/tutorials/code && docker compose up -d --build)
 demos/scripts/run_all.sh
 ```
+
+## Completeness audit
+
+After Phase 5 the plan was checked item by item against the repository and
+AGENTS.md. Five audit agents were started, but all hit the session rate limit
+and returned nothing, so the audit was done directly. Everything below was found
+and fixed in that pass, and verified by running the gates.
+
+| Finding                                                                                                                     | Fix                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Rule 3: 46 functions in `src/epr_mcp` lacked Args, Returns, or Examples (including the nine tools and four routes)          | Every public function now has all three sections; 33 examples run as doctests                                                       |
+| Rule 3: the demos, workshop scripts, and checkpoint servers had one-line or no docstrings                                   | Full docstrings throughout; 8 more doctests in the demos; checkpoints 04 and 05 stay identical                                      |
+| Rule 3: test modules, fixtures, helpers, and classes had no docstrings                                                      | Added to every test, fixture, helper, and test class                                                                                |
+| Copyright: the new test files had no SPDX header                                                                            | Added to every new test file                                                                                                        |
+| Rule 4: `Popen` used without a context manager in a demo and a functional test                                              | `running_server` context manager in the OpenAPI demo; `with subprocess.Popen` in the test                                           |
+| Rule 5: public functions with no direct test (`Config.as_dict`, `seed_epr`, `check_setup`, `client.py`, the demo helpers)   | New `test_config.py`, `test_tutorial_scripts.py`, and `test_demo_helpers.py`                                                        |
+| Plan 2.4: "for each tool test connect error, timeout, non-200, response validation failure" was only covered for some tools | A matrix over all nine tools (`TestEveryToolHandlesEprFailures`)                                                                    |
+| Plan 3.2: "CI-check that every solution imports and passes its tests" had a test but no CI                                  | `.github/workflows/ci.yaml` runs ruff, the tests with the 80% floor, doctests, and the markdown gates; it has not run on GitHub yet |
+| YAML lint warnings in the files created for the migration                                                                   | Document start markers added                                                                                                        |
+
+Still not done, because it cannot be done from the command line:
+
+- The VS Code, Claude Desktop, and Inspector 2.9.0 screens, and the dry run of
+  the workshop with a new attendee (plan items 3.4 and 3.5; one deliverable box
+  stays unticked on purpose).
+- `make tests` (tox, which downloads packages); the same checks were run
+  directly.
+- The first run of the new CI workflow.
 
 ## Release checklist (after the merge)
 

@@ -62,6 +62,9 @@ def debug_except_hook(type, value, tb):
         type: The exception class.
         value: The exception instance.
         tb: The traceback.
+
+    Examples:
+        ``sys.excepthook = debug_except_hook`` makes an uncaught error open ``pdb``.
     """
     print(f"epr python hates {type.__name__}")
     print(str(type))

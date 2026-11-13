@@ -23,6 +23,19 @@ from fastmcp.client.transports import StdioTransport
 
 
 async def run(server: Path, tool: str | None, arguments: dict) -> int:
+    """Start a server over stdio, then list its tools or call one.
+
+    Args:
+        server: Path to the server script.
+        tool: The tool to call, or None to list tools.
+        arguments: The tool arguments.
+
+    Returns:
+        0 on success, 1 if the tool reported an error.
+
+    Examples:
+        ``asyncio.run(run(Path('work/server.py'), None, {}))``
+    """
     transport = StdioTransport(command=sys.executable, args=[str(server)])
     async with Client(transport) as client:
         if tool is None:
@@ -35,6 +48,14 @@ async def run(server: Path, tool: str | None, arguments: dict) -> int:
 
 
 def main() -> int:
+    """Parse the command line and run it.
+
+    Returns:
+        The exit status.
+
+    Examples:
+        ``uv run python client.py list work/server.py``
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
     list_parser = sub.add_parser("list", help="list the tools a server exposes")

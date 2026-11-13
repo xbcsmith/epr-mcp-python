@@ -19,5 +19,13 @@ class Config:
     port: int = 8000
 
     def as_dict(self):
-        """Get a dictionary containing object properties"""
+        """Get a dictionary containing the configuration values.
+
+        Returns:
+            A dictionary with url, token, debug, transport, host, and port.
+
+        Examples:
+            >>> Config(url="http://epr").as_dict()["port"]
+            8000
+        """
         return asdict(self)

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
 """Checks that the workshop code and configs under docs/tutorials stay working.
 
 Every checkpoint server must import and expose the right tools, the final
@@ -24,6 +27,15 @@ CHECKPOINTS = {
     "checkpoint_04_validation": 9,
     "checkpoint_05_tests": 9,
 }
+# Starters are the beginning-of-module state.  starter_01 has no tools yet;
+# starter_03 is the checkpoint_01 state (one tool); starter_04 and
+# starter_05 are copies of the previous checkpoint so the tool counts match.
+STARTERS = {
+    "starter_01_first_tool": 0,
+    "starter_03_tool_set": 1,
+    "starter_04_validation": 9,
+    "starter_05_tests": 9,
+}
 SHIPPED_TOOLS = {
     "fetch_event",
     "fetch_receiver",
@@ -38,6 +50,7 @@ SHIPPED_TOOLS = {
 
 
 def load_server(checkpoint: str):
+    """Import a checkpoint's server.py as a module."""
     path = CODE / checkpoint / "server.py"
     spec = importlib.util.spec_from_file_location(f"workshop_{checkpoint}", path)
     module = importlib.util.module_from_spec(spec)
@@ -48,12 +61,46 @@ def load_server(checkpoint: str):
 @pytest.mark.parametrize(("checkpoint", "expected"), CHECKPOINTS.items())
 @pytest.mark.asyncio
 async def test_checkpoint_server_lists_expected_tools(checkpoint, expected):
+    """Test checkpoint server lists expected tools."""
     module = load_server(checkpoint)
     async with Client(module.mcp) as client:
         tools = {tool.name for tool in await client.list_tools()}
     assert len(tools) == expected
     if expected == 9:
         assert tools == SHIPPED_TOOLS
+
+
+@pytest.mark.parametrize(("starter", "expected"), STARTERS.items())
+@pytest.mark.asyncio
+async def test_starter_server_imports_and_has_expected_tools(starter, expected):
+    """Test starter server imports cleanly and has the expected number of tools."""
+    module = load_server(starter)
+    async with Client(module.mcp) as client:
+        tools = {tool.name for tool in await client.list_tools()}
+    assert len(tools) == expected
+    if expected == 9:
+        assert tools == SHIPPED_TOOLS
+
+
+def test_starter_03_matches_checkpoint_01():
+    """starter_03 is the beginning-of-module-03 state; it must equal checkpoint_01."""
+    assert (CODE / "starter_03_tool_set" / "server.py").read_text() == (
+        CODE / "checkpoint_01_first_tool" / "server.py"
+    ).read_text()
+
+
+def test_starter_04_matches_checkpoint_03():
+    """starter_04 is the beginning-of-module-04 state; it must equal checkpoint_03."""
+    assert (CODE / "starter_04_validation" / "server.py").read_text() == (
+        CODE / "checkpoint_03_tool_set" / "server.py"
+    ).read_text()
+
+
+def test_starter_05_server_matches_checkpoint_04():
+    """starter_05 is the beginning-of-module-05 state; server must equal checkpoint_04."""
+    assert (CODE / "starter_05_tests" / "server.py").read_text() == (
+        CODE / "checkpoint_04_validation" / "server.py"
+    ).read_text()
 
 
 def test_checkpoint_05_server_matches_checkpoint_04():
@@ -64,6 +111,7 @@ def test_checkpoint_05_server_matches_checkpoint_04():
 
 
 def test_checkpoint_05_own_tests_pass():
+    """Test checkpoint 05 own tests pass."""
     result = subprocess.run(
         [sys.executable, "-m", "pytest", "checkpoint_05_tests", "-q", "-p", "no:cacheprovider"],
         cwd=CODE,
@@ -74,6 +122,7 @@ def test_checkpoint_05_own_tests_pass():
 
 
 def test_vscode_config_references_existing_paths():
+    """Test vscode config references existing paths."""
     config = json.loads((CODE / ".vscode" / "mcp.json").read_text())
     workshop = config["servers"]["epr-workshop"]["args"]
     assert (CODE / workshop[-1]).is_file()
@@ -85,6 +134,7 @@ def test_vscode_config_references_existing_paths():
 
 
 def test_claude_desktop_config_matches_vscode_servers():
+    """Test claude desktop config matches vscode servers."""
     desktop = json.loads((CODE / "claude_desktop_config.json").read_text())["mcpServers"]
     vscode = json.loads((CODE / ".vscode" / "mcp.json").read_text())["servers"]
     assert desktop.keys() == vscode.keys()
@@ -94,16 +144,19 @@ def test_claude_desktop_config_matches_vscode_servers():
 
 
 def test_workshop_compose_runs_only_epr_services():
+    """Test workshop compose runs only epr services."""
     compose = yaml.safe_load((CODE / "docker-compose.yaml").read_text())
     assert set(compose["services"]) == {"postgres", "redpanda", "epr-server"}
 
 
 def test_tutorial_files_are_named_per_agents_rules():
+    """Test tutorial files are named per agents rules."""
     for path in TUTORIALS.glob("*.md"):
         assert path.name == "README.md" or re.fullmatch(r"[0-9a-z_]+\.md", path.name), path.name
 
 
 def test_tutorials_use_fastmcp_4_and_httpx2_only():
+    """Test tutorials use fastmcp 4 and httpx2 only."""
     stale = re.compile(
         r"mcp\.server\.fastmcp|^\s*import httpx\s*$|^\s*from httpx import|FastMCP 2|FastMCP 1|mcp\[cli\]", re.M
     )
@@ -112,6 +165,9 @@ def test_tutorials_use_fastmcp_4_and_httpx2_only():
     offenders = [
         str(p)
         for p in TUTORIALS.rglob("*")
-        if p.suffix in {".md", ".py", ".toml"} and p != migration_notes and stale.search(p.read_text())
+        if p.suffix in {".md", ".py", ".toml"}
+        and p != migration_notes
+        and ".venv" not in p.parts
+        and stale.search(p.read_text())
     ]
     assert offenders == []

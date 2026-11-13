@@ -37,7 +37,20 @@ class EventSearchInput(BaseModel):
     )
     @classmethod
     def strip_whitespace(cls, v):
-        """Strip whitespace from string fields"""
+        """Strip whitespace from string fields; a blank value becomes None.
+
+        Args:
+            v: The raw field value.
+
+        Returns:
+            The stripped string, None if it was blank, or the value unchanged if it is not a string.
+
+        Examples:
+            >>> EventSearchInput(name="  foo ").name
+            'foo'
+            >>> EventSearchInput(name="   ").name is None
+            True
+        """
         if isinstance(v, str):
             stripped = v.strip()
             return stripped if stripped else None
@@ -65,7 +78,20 @@ class EventReceiverSearchInput(BaseModel):
     @field_validator("name", "type", "version", "description", mode="before")
     @classmethod
     def strip_whitespace(cls, v):
-        """Strip whitespace from string fields"""
+        """Strip whitespace from string fields; a blank value becomes None.
+
+        Args:
+            v: The raw field value.
+
+        Returns:
+            The stripped string, None if it was blank, or the value unchanged if it is not a string.
+
+        Examples:
+            >>> EventReceiverSearchInput(name="  foo ").name
+            'foo'
+            >>> EventReceiverSearchInput(name="   ").name is None
+            True
+        """
         if isinstance(v, str):
             stripped = v.strip()
             return stripped if stripped else None
@@ -93,7 +119,20 @@ class EventReceiverGroupSearchInput(BaseModel):
     @field_validator("name", "type", "version", "description", mode="before")
     @classmethod
     def strip_whitespace(cls, v):
-        """Strip whitespace from string fields"""
+        """Strip whitespace from string fields; a blank value becomes None.
+
+        Args:
+            v: The raw field value.
+
+        Returns:
+            The stripped string, None if it was blank, or the value unchanged if it is not a string.
+
+        Examples:
+            >>> EventReceiverGroupSearchInput(name="  foo ").name
+            'foo'
+            >>> EventReceiverGroupSearchInput(name="   ").name is None
+            True
+        """
         if isinstance(v, str):
             stripped = v.strip()
             return stripped if stripped else None
@@ -143,7 +182,30 @@ class EventCreateInput(BaseModel):
     )
     @classmethod
     def strip_whitespace(cls, v):
-        """Strip whitespace from string fields"""
+        """Strip whitespace from string fields; a blank value is kept so it fails validation.
+
+        Args:
+            v: The raw field value.
+
+        Returns:
+            The stripped string, or the value unchanged if it is not a string.
+
+        Examples:
+            >>> EventCreateInput.model_validate(
+            ...     {
+            ...         "name": " foo ",
+            ...         "version": "1.0.0",
+            ...         "release": "r1",
+            ...         "platform_id": "linux",
+            ...         "package": "oci",
+            ...         "description": "d",
+            ...         "success": True,
+            ...         "payload": {},
+            ...         "event_receiver_id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+            ...     }
+            ... ).name
+            'foo'
+        """
         if isinstance(v, str):
             stripped = v.strip()
             return stripped if stripped else v  # Don't convert to None for required fields
@@ -159,6 +221,22 @@ class EventCreateInput(BaseModel):
 
         Returns:
             The value, unchanged.
+
+        Examples:
+            >>> EventCreateInput.model_validate(
+            ...     {
+            ...         "name": "foo",
+            ...         "version": "1.0.0",
+            ...         "release": "r1",
+            ...         "platform_id": "linux",
+            ...         "package": "oci",
+            ...         "description": "d",
+            ...         "success": True,
+            ...         "payload": {"a": 1},
+            ...         "event_receiver_id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+            ...     }
+            ... ).payload
+            {'a': 1}
         """
         if not isinstance(v, dict):
             raise ValidationError("Payload must be a dictionary")
@@ -191,7 +269,20 @@ class EventReceiverCreateInput(BaseModel):
     @field_validator("name", "type", "version", "description", mode="before")
     @classmethod
     def strip_whitespace(cls, v):
-        """Strip whitespace from string fields"""
+        """Strip whitespace from string fields; a blank value is kept so it fails validation.
+
+        Args:
+            v: The raw field value.
+
+        Returns:
+            The stripped string, or the value unchanged if it is not a string.
+
+        Examples:
+            >>> EventReceiverCreateInput.model_validate(
+            ...     {"name": " foo ", "type": "t", "version": "1.0.0", "description": "d", "schema": {}}
+            ... ).name
+            'foo'
+        """
         if isinstance(v, str):
             stripped = v.strip()
             return stripped if stripped else v  # Don't convert to None for required fields
@@ -222,7 +313,26 @@ class EventReceiverGroupCreateInput(BaseModel):
     @field_validator("name", "type", "version", "description", mode="before")
     @classmethod
     def strip_whitespace(cls, v):
-        """Strip whitespace from string fields"""
+        """Strip whitespace from string fields; a blank value is kept so it fails validation.
+
+        Args:
+            v: The raw field value.
+
+        Returns:
+            The stripped string, or the value unchanged if it is not a string.
+
+        Examples:
+            >>> EventReceiverGroupCreateInput.model_validate(
+            ...     {
+            ...         "name": " foo ",
+            ...         "type": "t",
+            ...         "version": "1.0.0",
+            ...         "description": "d",
+            ...         "event_receiver_ids": ["01JYRZ96R690ZTQ15Q53GEY6E6"],
+            ...     }
+            ... ).name
+            'foo'
+        """
         if isinstance(v, str):
             stripped = v.strip()
             return stripped if stripped else v  # Don't convert to None for required fields
@@ -238,6 +348,21 @@ class EventReceiverGroupCreateInput(BaseModel):
 
         Returns:
             The cleaned list of IDs.
+
+        Raises:
+            ValueError: If the list is empty or an ID is not a valid ULID.
+
+        Examples:
+            >>> EventReceiverGroupCreateInput.model_validate(
+            ...     {
+            ...         "name": "foo",
+            ...         "type": "t",
+            ...         "version": "1.0.0",
+            ...         "description": "d",
+            ...         "event_receiver_ids": [" 01JYRZ96R690ZTQ15Q53GEY6E6 "],
+            ...     }
+            ... ).event_receiver_ids
+            ['01JYRZ96R690ZTQ15Q53GEY6E6']
         """
         if not v:  # Check if list is empty
             raise ValidationError("Event receiver IDs list cannot be empty")
@@ -296,6 +421,10 @@ class FetchInput(BaseModel):
 
         Returns:
             The ID without surrounding whitespace.
+
+        Examples:
+            >>> FetchInput(id="01JYRZ96R690ZTQ15Q53GEY6E6").id
+            '01JYRZ96R690ZTQ15Q53GEY6E6'
         """
         if not v or not v.strip():
             raise ValidationError("ID cannot be empty")
@@ -341,6 +470,22 @@ class EventResponse(BaseModel):
 
         Returns:
             A dictionary.
+
+        Examples:
+            >>> EventResponse.model_validate(
+            ...     {
+            ...         "id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+            ...         "name": "foo",
+            ...         "version": "1.0.0",
+            ...         "release": "r1",
+            ...         "platform_id": "linux",
+            ...         "package": "oci",
+            ...         "description": "d",
+            ...         "success": True,
+            ...         "event_receiver_id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+            ...     }
+            ... ).payload
+            {}
         """
         if v is None:
             return {}
@@ -381,6 +526,18 @@ class EventReceiverResponse(BaseModel):
 
         Returns:
             A dictionary.
+
+        Examples:
+            >>> EventReceiverResponse.model_validate(
+            ...     {
+            ...         "id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+            ...         "name": "foo",
+            ...         "type": "foo.type",
+            ...         "version": "1.0.0",
+            ...         "description": "d",
+            ...     }
+            ... ).schema_data
+            {}
         """
         if v is None:
             return {}
@@ -423,6 +580,21 @@ class EventReceiverGroupResponse(BaseModel):
 
         Returns:
             The cleaned list of IDs.
+
+        Raises:
+            ValueError: If the list is empty or an ID is not a valid ULID.
+
+        Examples:
+            >>> EventReceiverGroupCreateInput.model_validate(
+            ...     {
+            ...         "name": "foo",
+            ...         "type": "t",
+            ...         "version": "1.0.0",
+            ...         "description": "d",
+            ...         "event_receiver_ids": [" 01JYRZ96R690ZTQ15Q53GEY6E6 "],
+            ...     }
+            ... ).event_receiver_ids
+            ['01JYRZ96R690ZTQ15Q53GEY6E6']
         """
         if v is None:
             return []
@@ -506,18 +678,24 @@ def _sanitize_dict(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def validate_input(operation: str, input_data: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Validate input data for a given operation.
+    """Validate the arguments of a tool call.
 
     Args:
-        operation: The operation name (e.g., 'search_events', 'create_event')
-        input_data: The input data to validate
+        operation: The tool: a ``fetch_*``, ``search_*``, or ``create_*`` name.
+        input_data: An ID string for a fetch; for the others, a dictionary with a
+            ``data`` key that holds the criteria or fields.
 
     Returns:
-        Validated data as a dictionary
+        The validated data as a dictionary, with field aliases applied.
 
     Raises:
-        ValidationError: If the operation is not supported or input data doesn't match the schema
+        ValidationError: If the operation is not supported or the data does not match the schema.
+
+    Examples:
+        >>> validate_input("fetch_event", " 01JYRZ96R690ZTQ15Q53GEY6E6 ")
+        {'id': '01JYRZ96R690ZTQ15Q53GEY6E6'}
+        >>> validate_input("search_events", {"data": {"name": "foo"}})["data"]["name"]
+        'foo'
     """
     if operation not in SCHEMA_MAP:
         raise ValidationError(f"Unsupported operation: {operation}")
@@ -542,17 +720,20 @@ def validate_input(operation: str, input_data: Union[str, Dict[str, Any]]) -> Di
 
 
 def get_validation_schema(operation: str) -> BaseModel:
-    """
-    Get the validation schema class for a given operation.
+    """Get the validation schema class for a given operation.
 
     Args:
-        operation: The operation name
+        operation: The operation name, for example "search_events".
 
     Returns:
-        The Pydantic model class for validation
+        The Pydantic model class used to validate that operation.
 
     Raises:
-        ValidationError: If the operation is not supported
+        ValidationError: If the operation is not supported.
+
+    Examples:
+        >>> get_validation_schema("fetch_group").__name__
+        'FetchInput'
     """
     if operation not in SCHEMA_MAP:
         raise ValidationError(f"Unsupported operation: {operation}")
@@ -561,17 +742,32 @@ def get_validation_schema(operation: str) -> BaseModel:
 
 
 def validate_event_response(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Validate event response data from EPR API.
+    """Validate an event from the EPR API.
 
     Args:
-        data: Raw response data from API
+        data: The raw record as returned by EPR.
 
     Returns:
-        Validated event data as dictionary
+        The validated record as a dictionary.
 
     Raises:
-        ValidationError: If data doesn't match expected schema
+        ValueError: If the record does not match the expected schema.
+
+    Examples:
+        >>> validate_event_response(
+        ...     {
+        ...         "id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+        ...         "name": "foo",
+        ...         "version": "1.0.0",
+        ...         "release": "r1",
+        ...         "platform_id": "linux",
+        ...         "package": "oci",
+        ...         "description": "d",
+        ...         "success": True,
+        ...         "event_receiver_id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+        ...     }
+        ... )["name"]
+        'foo'
     """
     try:
         validated = EventResponse(**data)
@@ -581,17 +777,28 @@ def validate_event_response(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def validate_event_receiver_response(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Validate event receiver response data from EPR API.
+    """Validate an event receiver from the EPR API.
 
     Args:
-        data: Raw response data from API
+        data: The raw record as returned by EPR.
 
     Returns:
-        Validated event receiver data as dictionary
+        The validated record as a dictionary.
 
     Raises:
-        ValidationError: If data doesn't match expected schema
+        ValueError: If the record does not match the expected schema.
+
+    Examples:
+        >>> validate_event_receiver_response(
+        ...     {
+        ...         "id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+        ...         "name": "foo",
+        ...         "type": "foo.type",
+        ...         "version": "1.0.0",
+        ...         "description": "d",
+        ...     }
+        ... )["name"]
+        'foo'
     """
     try:
         validated = EventReceiverResponse(**data)
@@ -601,17 +808,28 @@ def validate_event_receiver_response(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def validate_event_receiver_group_response(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Validate event receiver group response data from EPR API.
+    """Validate an event receiver group from the EPR API.
 
     Args:
-        data: Raw response data from API
+        data: The raw record as returned by EPR.
 
     Returns:
-        Validated event receiver group data as dictionary
+        The validated record as a dictionary.
 
     Raises:
-        ValidationError: If data doesn't match expected schema
+        ValueError: If the record does not match the expected schema.
+
+    Examples:
+        >>> validate_event_receiver_group_response(
+        ...     {
+        ...         "id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+        ...         "name": "foo",
+        ...         "type": "foo.type",
+        ...         "version": "1.0.0",
+        ...         "description": "d",
+        ...     }
+        ... )["name"]
+        'foo'
     """
     try:
         validated = EventReceiverGroupResponse(**data)
@@ -621,17 +839,37 @@ def validate_event_receiver_group_response(data: Dict[str, Any]) -> Dict[str, An
 
 
 def validate_event_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Validate list of events response data from EPR API.
+    """Validate a list of events from the EPR API.
 
     Args:
-        data: Raw list of event data from API
+        data: The list of raw records as returned by EPR.
 
     Returns:
-        Validated list of event data
+        The validated records as a list of dictionaries.
 
     Raises:
-        ValidationError: If any event doesn't match expected schema
+        ValueError: If any record does not match the expected schema.
+
+    Examples:
+        >>> [
+        ...     r["name"]
+        ...     for r in validate_event_list_response(
+        ...         [
+        ...             {
+        ...                 "id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+        ...                 "name": "foo",
+        ...                 "version": "1.0.0",
+        ...                 "release": "r1",
+        ...                 "platform_id": "linux",
+        ...                 "package": "oci",
+        ...                 "description": "d",
+        ...                 "success": True,
+        ...                 "event_receiver_id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+        ...             }
+        ...         ]
+        ...     )
+        ... ]
+        ['foo']
     """
     try:
         return [validate_event_response(event) for event in data]
@@ -640,17 +878,33 @@ def validate_event_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, A
 
 
 def validate_event_receiver_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Validate list of event receivers response data from EPR API.
+    """Validate a list of event receivers from the EPR API.
 
     Args:
-        data: Raw list of event receiver data from API
+        data: The list of raw records as returned by EPR.
 
     Returns:
-        Validated list of event receiver data
+        The validated records as a list of dictionaries.
 
     Raises:
-        ValidationError: If any receiver doesn't match expected schema
+        ValueError: If any record does not match the expected schema.
+
+    Examples:
+        >>> [
+        ...     r["name"]
+        ...     for r in validate_event_receiver_list_response(
+        ...         [
+        ...             {
+        ...                 "id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+        ...                 "name": "foo",
+        ...                 "type": "foo.type",
+        ...                 "version": "1.0.0",
+        ...                 "description": "d",
+        ...             }
+        ...         ]
+        ...     )
+        ... ]
+        ['foo']
     """
     try:
         return [validate_event_receiver_response(receiver) for receiver in data]
@@ -659,17 +913,33 @@ def validate_event_receiver_list_response(data: List[Dict[str, Any]]) -> List[Di
 
 
 def validate_event_receiver_group_list_response(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Validate list of event receiver groups response data from EPR API.
+    """Validate a list of event receiver groups from the EPR API.
 
     Args:
-        data: Raw list of event receiver group data from API
+        data: The list of raw records as returned by EPR.
 
     Returns:
-        Validated list of event receiver group data
+        The validated records as a list of dictionaries.
 
     Raises:
-        ValidationError: If any group doesn't match expected schema
+        ValueError: If any record does not match the expected schema.
+
+    Examples:
+        >>> [
+        ...     r["name"]
+        ...     for r in validate_event_receiver_group_list_response(
+        ...         [
+        ...             {
+        ...                 "id": "01JYRZ96R690ZTQ15Q53GEY6E6",
+        ...                 "name": "foo",
+        ...                 "type": "foo.type",
+        ...                 "version": "1.0.0",
+        ...                 "description": "d",
+        ...             }
+        ...         ]
+        ...     )
+        ... ]
+        ['foo']
     """
     try:
         return [validate_event_receiver_group_response(group) for group in data]

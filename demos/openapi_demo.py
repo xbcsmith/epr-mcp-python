@@ -17,10 +17,12 @@ Exits 0 when every step works, 1 otherwise.
 
 import argparse
 import asyncio
+import contextlib
 import socket
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 
 import httpx2
 import yaml
@@ -30,29 +32,75 @@ HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 
 
 def step(number: int, total: int, title: str) -> None:
+    """Print a numbered step heading.
+
+    Args:
+        number: The step number.
+        total: The number of steps.
+        title: What the step does.
+
+    Examples:
+        ``step(1, 5, 'Health check')``
+    """
     print(f"\n[{number}/{total}] {title}")
 
 
 def free_port() -> int:
+    """Find a free local TCP port.
+
+    Returns:
+        A port number that was free a moment ago.
+
+    Examples:
+        >>> 1024 <= free_port() <= 65535
+        True
+    """
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
 
 
-def start_server(port: int, epr_url: str) -> subprocess.Popen:
-    """Start the MCP server over HTTP in a child process."""
-    return subprocess.Popen(
-        [
-            sys.executable, "-m", "epr_mcp.main", "start",
-            "--transport", "http", "--host", "127.0.0.1", "--port", str(port),
-            "--url", epr_url,
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )  # fmt: skip
+@contextlib.contextmanager
+def running_server(port: int, epr_url: str) -> Iterator[subprocess.Popen]:
+    """Run the MCP server over HTTP in a child process for the duration of a with block.
+
+    Args:
+        port: The port to bind on 127.0.0.1.
+        epr_url: The EPR URL given to the server; it is not contacted.
+
+    Yields:
+        The running process. It is terminated when the block ends.
+
+    Examples:
+        ``with running_server(free_port(), 'http://localhost:8042') as server: ...``
+    """
+    command = [
+        sys.executable, "-m", "epr_mcp.main", "start",
+        "--transport", "http", "--host", "127.0.0.1", "--port", str(port),
+        "--url", epr_url,
+    ]  # fmt: skip
+    with subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as process:
+        try:
+            yield process
+        finally:
+            process.terminate()
+            process.wait(timeout=10)
 
 
 def wait_until_healthy(base_url: str, server: subprocess.Popen | None, timeout: float = 30) -> None:
+    """Wait until the server answers its health check.
+
+    Args:
+        base_url: The server's base URL.
+        server: The child process, if the demo started it, so an early exit is noticed.
+        timeout: Seconds to wait.
+
+    Raises:
+        RuntimeError: If the process exits early or the server is not healthy in time.
+
+    Examples:
+        ``wait_until_healthy('http://127.0.0.1:8000', None)``
+    """
     deadline = time.time() + timeout
     while True:
         try:
@@ -68,6 +116,17 @@ def wait_until_healthy(base_url: str, server: subprocess.Popen | None, timeout: 
 
 
 def show_endpoints(base_url: str) -> None:
+    """Call the health, OpenAPI, and Swagger endpoints and print what they return.
+
+    Args:
+        base_url: The server's base URL.
+
+    Raises:
+        httpx2.HTTPError: If an endpoint cannot be reached or answers with an error.
+
+    Examples:
+        ``show_endpoints('http://127.0.0.1:8000')``
+    """
     step(1, 5, "Health check")
     response = httpx2.get(f"{base_url}/health")
     print(f"GET {base_url}/health -> {response.status_code} {response.text!r}")
@@ -98,6 +157,14 @@ def show_endpoints(base_url: str) -> None:
 
 
 async def show_tools(base_url: str) -> None:
+    """Connect an MCP client and list the tools.
+
+    Args:
+        base_url: The server's base URL; the MCP endpoint is ``/mcp`` under it.
+
+    Examples:
+        ``asyncio.run(show_tools('http://127.0.0.1:8000'))``
+    """
     step(5, 5, "MCP tools, listed by a FastMCP client")
     async with Client(f"{base_url}/mcp") as client:
         tools = await client.list_tools()
@@ -108,6 +175,14 @@ async def show_tools(base_url: str) -> None:
 
 
 def main() -> int:
+    """Parse the command line, start a server if needed, and run the demo.
+
+    Returns:
+        0 if every step worked, 1 otherwise.
+
+    Examples:
+        ``python demos/openapi_demo.py``
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--url", help="use a server that is already running instead of starting one")
     parser.add_argument(
@@ -117,25 +192,22 @@ def main() -> int:
 
     print("EPR MCP Server: HTTP endpoints demo")
     print("=" * 40)
-    server = None
     try:
         if args.url:
             base_url = args.url.rstrip("/")
+            server_context = contextlib.nullcontext(None)
         else:
             port = free_port()
             base_url = f"http://127.0.0.1:{port}"
             print(f"Starting the server on {base_url}")
-            server = start_server(port, args.epr_url)
-        wait_until_healthy(base_url, server)
-        show_endpoints(base_url)
-        asyncio.run(show_tools(base_url))
+            server_context = running_server(port, args.epr_url)
+        with server_context as server:
+            wait_until_healthy(base_url, server)
+            show_endpoints(base_url)
+            asyncio.run(show_tools(base_url))
     except (RuntimeError, httpx2.HTTPError, KeyError) as error:
         print(f"\nDemo failed: {error!r}", file=sys.stderr)
         return 1
-    finally:
-        if server is not None:
-            server.terminate()
-            server.wait(timeout=10)
     print("\nDemo completed.")
     return 0
 

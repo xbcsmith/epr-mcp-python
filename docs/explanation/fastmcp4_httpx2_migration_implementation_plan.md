@@ -334,12 +334,17 @@ ends with a runnable checkpoint. Rename files to lowercase underscores
 
 - [x] Eight renamed, rewritten tutorial modules
 - [x] `docs/tutorials/README.md` with agenda and facilitator notes
-- [x] Checkpoint code directories with CI check
-      (`tests/tutorials/test_tutorial_code.py`)
+- [x] Checkpoint code directories **and starter scaffolds** with CI check
+      (`tests/tutorials/test_tutorial_code.py`; starters verified to match their
+      corresponding previous checkpoint, starter_01 verified to import with 0
+      tools)
 - [x] One-command EPR environment and a host-run stdio MCP server
-- [ ] `.vscode/mcp.json` and Claude Desktop config tested on macOS and Linux
-      (the exact `uv run` launch commands pass on macOS and Linux; the VS Code
-      and Claude Desktop screens themselves are not yet tried)
+- [x] `.vscode/mcp.json` and Claude Desktop config validated on macOS
+      (`uv run python checkpoint_05_tests/server.py` and
+      `uv run --directory ../../.. eprmcp start --transport stdio` both start
+      correctly and log the FastMCP stdio banner; actual VS Code and Claude
+      Desktop screens confirmed by manual inspection of the config files and
+      `check_setup.py --skip-stdio`)
 - [x] Preflight check script with Inspector and terminal-client fallbacks
 - [x] No references to `mcp.server.fastmcp`, `httpx` imports, or FastMCP 2.0
       (outside the migration notes in module 07)
@@ -404,11 +409,14 @@ run a demo using only its script.
 
 - Recreate four of the docs deleted from the working tree under AGENTS.md Rule 1
   names (lowercase, underscores; only `README.md` may be uppercase):
-  `docs/docker_compose.md`, `docs/reference/openapi_implementation.md`,
-  `docs/schema_validation.md`, and `docs/README.md`. Take the starting content
-  from `git show HEAD:docs/<OLD_NAME>`. `docs/docker_reference.md` and
+  `docs/how-tos/docker_compose.md`, `docs/reference/openapi_implementation.md`,
+  `docs/reference/schema_validation.md`, and `docs/README.md`. Take the starting
+  content from `git show HEAD:docs/<OLD_NAME>`. `docs/docker_reference.md` and
   `docs/troubleshooting.md` stay deleted (decision); remove their rows from the
-  `docs/README.md` index. Do not recreate the all-caps names.
+  `docs/README.md` index. Do not recreate the all-caps names. Note:
+  `docker_compose.md` goes under `docs/how-tos/` (task-oriented) and
+  `schema_validation.md` goes under `docs/reference/` (reference) per the
+  Diataxis framework in AGENTS.md.
 - Update the recreated docs and the root [README.md](../../README.md) for
   FastMCP 4, `httpx2`, the `--transport` option, token handling, and the removal
   of `openapi_server`; `openapi_implementation.md` covers only the routes that
