@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class CmdLine(object):
+    """Command line dispatcher: the first argument names the method to run."""
+
     def __init__(self):
         parser = argparse.ArgumentParser(
             description="EPR MCP Server",
@@ -43,15 +45,23 @@ class CmdLine(object):
         getattr(self, args.command)()
 
     def start(self):
-        """
-        start the EPR MCP server
+        """Start the EPR MCP server.
+
+        Reads --url, --token, --transport, --host, --port, and --debug from
+        ``sys.argv`` (environment variables supply the defaults) and runs the server.
+
+        Returns:
+            The status message from ``server.run`` after the server stops.
+
+        Examples:
+            From a shell: ``eprmcp start --transport http --host 127.0.0.1 --port 8000``
         """
         parser = argparse.ArgumentParser(description="start the EPR MCP Server\n")
         parser.add_argument(
             "--token",
             dest="epr_api_token",
             action="store",
-            default=os.environ.get("EPR_API_TOKEN"),
+            default=os.environ.get("EPR_API_TOKEN") or os.environ.get("EPR_TOKEN"),
             help="EPR Access Token",
         )
         parser.add_argument(
@@ -60,6 +70,29 @@ class CmdLine(object):
             action="store",
             default=os.environ.get("EPR_URL", "http://localhost:8042"),
             help="EPR Server URL",
+        )
+        parser.add_argument(
+            "--transport",
+            dest="transport",
+            action="store",
+            choices=config.TRANSPORTS,
+            default=os.environ.get("MCP_TRANSPORT", "http"),
+            help="MCP transport: http (default) or stdio",
+        )
+        parser.add_argument(
+            "--host",
+            dest="host",
+            action="store",
+            default=os.environ.get("MCP_HOST", "0.0.0.0"),
+            help="Host to bind for the http transport",
+        )
+        parser.add_argument(
+            "--port",
+            dest="port",
+            action="store",
+            type=int,
+            default=int(os.environ.get("MCP_PORT", "8000")),
+            help="Port to bind for the http transport",
         )
         parser.add_argument(
             "--debug",
@@ -72,20 +105,35 @@ class CmdLine(object):
         args = vars(parser.parse_args(sys.argv[2:]))
         url = args["epr_url"]
         token = args["epr_api_token"]
-        cfg = config.Config(url=url, token=token)
-
-        cfg.debug = args["debug"]
+        cfg = config.Config(
+            url=url,
+            token=token,
+            debug=args["debug"],
+            transport=args["transport"],
+            host=args["host"],
+            port=args["port"],
+        )
 
         return server.run(cfg)
 
     def version(self):
-        """
-        Prints version of epr-mcp
+        """Print the name and version of epr-mcp.
+
+        Examples:
+            From a shell: ``eprmcp version`` prints the package name, then the version.
         """
         print(constants.info())
 
 
 def main():
+    """Entry point for the ``eprmcp`` command.
+
+    Reads the command from ``sys.argv`` and runs it; exits with status 1 on an
+    unknown command.
+
+    Examples:
+        From a shell: ``eprmcp start --transport stdio --url http://localhost:8042``
+    """
     CmdLine()
 
 

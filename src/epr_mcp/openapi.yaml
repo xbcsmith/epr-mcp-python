@@ -1,3 +1,4 @@
+---
 openapi: 3.1.0
 info:
   title: EPR (Event Processing Registry) API
@@ -200,18 +201,18 @@ paths:
             type: string
           description: Event ID
       responses:
-        '200':
+        "200":
           description: Event found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Event'
-        '404':
+                $ref: "#/components/schemas/Event"
+        "404":
           description: Event not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /api/v1/events:
     post:
@@ -223,9 +224,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Event'
+              $ref: "#/components/schemas/Event"
       responses:
-        '201':
+        "201":
           description: Event created successfully
           content:
             application/json:
@@ -235,13 +236,13 @@ paths:
                   message:
                     type: string
                   event:
-                    $ref: '#/components/schemas/Event'
-        '400':
+                    $ref: "#/components/schemas/Event"
+        "400":
           description: Invalid input
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /api/v1/events/search:
     post:
@@ -253,16 +254,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SearchCriteria'
+              $ref: "#/components/schemas/SearchCriteria"
       responses:
-        '200':
+        "200":
           description: Search results
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Event'
+                  $ref: "#/components/schemas/Event"
 
   /api/v1/receivers/{id}:
     get:
@@ -277,18 +278,18 @@ paths:
             type: string
           description: Event receiver ID
       responses:
-        '200':
+        "200":
           description: Event receiver found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EventReceiver'
-        '404':
+                $ref: "#/components/schemas/EventReceiver"
+        "404":
           description: Event receiver not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /api/v1/receivers:
     post:
@@ -300,9 +301,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EventReceiver'
+              $ref: "#/components/schemas/EventReceiver"
       responses:
-        '201':
+        "201":
           description: Event receiver created successfully
           content:
             application/json:
@@ -312,13 +313,13 @@ paths:
                   message:
                     type: string
                   receiver:
-                    $ref: '#/components/schemas/EventReceiver'
-        '400':
+                    $ref: "#/components/schemas/EventReceiver"
+        "400":
           description: Invalid input
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /api/v1/receivers/search:
     post:
@@ -330,16 +331,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SearchCriteria'
+              $ref: "#/components/schemas/SearchCriteria"
       responses:
-        '200':
+        "200":
           description: Search results
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/EventReceiver'
+                  $ref: "#/components/schemas/EventReceiver"
 
   /api/v1/groups/{id}:
     get:
@@ -354,18 +355,18 @@ paths:
             type: string
           description: Event receiver group ID
       responses:
-        '200':
+        "200":
           description: Event receiver group found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EventReceiverGroup'
-        '404':
+                $ref: "#/components/schemas/EventReceiverGroup"
+        "404":
           description: Event receiver group not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /api/v1/groups:
     post:
@@ -377,9 +378,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EventReceiverGroup'
+              $ref: "#/components/schemas/EventReceiverGroup"
       responses:
-        '201':
+        "201":
           description: Event receiver group created successfully
           content:
             application/json:
@@ -389,13 +390,13 @@ paths:
                   message:
                     type: string
                   group:
-                    $ref: '#/components/schemas/EventReceiverGroup'
-        '400':
+                    $ref: "#/components/schemas/EventReceiverGroup"
+        "400":
           description: Invalid input
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /api/v1/groups/search:
     post:
@@ -407,16 +408,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SearchCriteria'
+              $ref: "#/components/schemas/SearchCriteria"
       responses:
-        '200':
+        "200":
           description: Search results
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/EventReceiverGroup'
+                  $ref: "#/components/schemas/EventReceiverGroup"
 
   /health:
     get:
@@ -424,7 +425,7 @@ paths:
       summary: Health check endpoint
       description: Check if the service is running
       responses:
-        '200':
+        "200":
           description: Service is healthy
           content:
             text/plain:

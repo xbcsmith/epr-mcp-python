@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "epr-workshop": {
+      "command": "/ABSOLUTE/PATH/TO/uv",
+      "args": [
+        "run",
+        "--directory",
+        "/ABSOLUTE/PATH/TO/epr-mcp-python/docs/tutorials/code",
+        "python",
+        "checkpoint_05_tests/server.py"
+      ],
+      "env": {
+        "EPR_URL": "http://localhost:8042"
+      }
+    },
+    "epr-mcp": {
+      "command": "/ABSOLUTE/PATH/TO/uv",
+      "args": [
+        "run",
+        "--directory",
+        "/ABSOLUTE/PATH/TO/epr-mcp-python",
+        "eprmcp",
+        "start",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "EPR_URL": "http://localhost:8042"
+      }
+    }
+  }
+}

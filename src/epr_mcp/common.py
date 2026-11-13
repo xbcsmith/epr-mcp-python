@@ -7,6 +7,9 @@ import os
 import sys
 from typing import Optional
 
+import httpx2
+
+from .config import Config
 from .errors import debug_except_hook
 from .models import GraphQLQuery
 
@@ -19,7 +22,46 @@ if debug:
     logger.setLevel(logging.DEBUG)
 
 
+def create_client(cfg: Config) -> httpx2.AsyncClient:
+    """Create an HTTP client for the EPR API.
+
+    The client sends a JSON content type and, when the configuration has a
+    token, an ``Authorization: Bearer`` header on every request.
+
+    Args:
+        cfg: Server configuration providing the optional API token.
+
+    Returns:
+        A new ``httpx2.AsyncClient``; use it as an async context manager.
+
+    Examples:
+        >>> client = create_client(Config(url="http://epr", token="abc"))
+        >>> client.headers["Authorization"]
+        'Bearer abc'
+    """
+    headers = {"Content-Type": "application/json"}
+    if cfg.token:
+        headers["Authorization"] = f"Bearer {cfg.token}"
+    return httpx2.AsyncClient(headers=headers)
+
+
 def get_operation(name: str, operation: str) -> str:
+    """Look up a GraphQL type or field name.
+
+    Args:
+        name: Kind of lookup: "search", "mutation", "operation", or "create".
+        operation: The operation inside that kind, for example "events" or "create_event".
+
+    Returns:
+        The GraphQL input type or field name.
+
+    Raises:
+        KeyError: If the name or operation is not known.
+
+    Examples:
+        >>> get_operation("operation", "events")
+        'event'
+    """
     operation_map = {
         "search": {
             "events": "FindEventInput!",
@@ -46,7 +88,26 @@ def get_operation(name: str, operation: str) -> str:
 
 
 def get_search_query(operation: str, params: Optional[dict] = None, fields: Optional[list] = None) -> GraphQLQuery:
-    """Convert a query dictionary to a GraphQL query string."""
+    """Build the GraphQL query for an EPR search.
+
+    Args:
+        operation: The search to run: "events", "event_receivers", or "event_receiver_groups".
+        params: The search criteria, or None for none.
+        fields: The fields to return for each record; defaults to just "id".
+
+    Returns:
+        A GraphQLQuery holding the query text and its variables.
+
+    Raises:
+        KeyError: If the operation is not known.
+
+    Examples:
+        >>> q = get_search_query("events", {"name": "foo"}, ["id", "name"])
+        >>> q.variables
+        {'obj': {'name': 'foo'}}
+        >>> q.query
+        'query ($obj: FindEventInput!){events(event: $obj) { id,name }}'
+    """
     variables = dict(obj=params)
     method = get_operation("search", operation)
     op = get_operation("operation", operation)
@@ -56,7 +117,23 @@ def get_search_query(operation: str, params: Optional[dict] = None, fields: Opti
 
 
 def get_mutation_query(operation: str, params: Optional[dict] = None) -> GraphQLQuery:
-    """Convert a mutation dictionary to a GraphQL mutation string."""
+    """Build the GraphQL mutation for an EPR create.
+
+    Args:
+        operation: The mutation: "create_event", "create_event_receiver", or
+            "create_event_receiver_group".
+        params: The fields of the record to create, or None for none.
+
+    Returns:
+        A GraphQLQuery holding the mutation text and its variables.
+
+    Raises:
+        KeyError: If the operation is not known.
+
+    Examples:
+        >>> get_mutation_query("create_event", {"name": "foo"}).query
+        'mutation ($obj: CreateEventInput!){create_event(event: $obj)}'
+    """
     variables = dict(obj=params)
     method = get_operation("mutation", operation)
     op = get_operation("create", operation)

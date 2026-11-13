@@ -8,14 +8,34 @@ from typing import Any, Dict, List
 
 
 class ModelType(Enum):
+    """The kinds of EPR records."""
+
     EVENT = "Event"
     RECEIVER = "EventReceiver"
     GROUP = "EventReceiverGroup"
 
     def lower(self):
+        """Return the record name in lower case.
+
+        Returns:
+            The lower-case name.
+
+        Examples:
+            >>> ModelType.RECEIVER.lower()
+            'eventreceiver'
+        """
         return self.value.lower()
 
     def lower_plural(self):
+        """Return the record name in lower case and plural.
+
+        Returns:
+            The lower-case plural name.
+
+        Examples:
+            >>> ModelType.GROUP.lower_plural()
+            'eventreceivergroups'
+        """
         return self.lower() + "s"
 
 
@@ -24,11 +44,29 @@ class Model:
     """Base class for data objects. Provides as_dict"""
 
     def as_dict(self):
-        """Get a dictionary contain object properties"""
+        """Get a dictionary containing the object's fields.
+
+        Returns:
+            All fields, including empty ones.
+
+        Examples:
+            >>> Event(name="foo").as_dict()["name"]
+            'foo'
+            >>> Event(name="foo").as_dict()["release"]
+            ''
+        """
         return asdict(self)
 
     def as_dict_query(self):
-        """Get a dictionary contain object properties"""
+        """Get a dictionary of the object's fields that have a value.
+
+        Returns:
+            The fields that are not empty, suitable as a request body.
+
+        Examples:
+            >>> Event(name="foo").as_dict_query()
+            {'name': 'foo'}
+        """
         return {k: v for k, v in self.as_dict().items() if v}
 
 
@@ -109,5 +147,7 @@ class Message(Model):
 
 @dataclass
 class GraphQLQuery(Model):
+    """A GraphQL query and its variables, ready to post to EPR."""
+
     query: str
     variables: Dict[str, Any] = field(default_factory=dict)

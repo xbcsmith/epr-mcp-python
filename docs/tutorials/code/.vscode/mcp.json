@@ -1,0 +1,42 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "epr_url",
+      "description": "EPR URL",
+      "default": "http://localhost:8042"
+    }
+  ],
+  "servers": {
+    "epr-workshop": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${workspaceFolder}",
+        "python",
+        "checkpoint_05_tests/server.py"
+      ],
+      "env": {
+        "EPR_URL": "${input:epr_url}"
+      }
+    },
+    "epr-mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${workspaceFolder}/../../..",
+        "eprmcp",
+        "start",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "EPR_URL": "${input:epr_url}"
+      }
+    }
+  }
+}

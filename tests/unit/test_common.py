@@ -1,8 +1,12 @@
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
 """Unit tests for epr_mcp.common module."""
 
 import pytest  # type: ignore
 
-from epr_mcp.common import get_mutation_query, get_operation, get_search_query
+from epr_mcp.common import create_client, get_mutation_query, get_operation, get_search_query
+from epr_mcp.config import Config
 from epr_mcp.models import GraphQLQuery
 
 
@@ -162,3 +166,25 @@ class TestGetMutationQuery:
         assert result.query.startswith("mutation")
         assert "$obj: CreateEventInput!" in result.query
         assert "{create_event(event: $obj)}" in result.query
+
+
+class TestCreateClient:
+    """Test create_client function."""
+
+    def test_sends_bearer_token_when_configured(self):
+        """Token is sent as a bearer Authorization header."""
+        client = create_client(Config(url="http://epr", token="abc"))
+        assert client.headers["Authorization"] == "Bearer abc"
+        assert client.headers["Content-Type"] == "application/json"
+
+    def test_omits_authorization_without_token(self):
+        """No Authorization header when the token is unset or empty."""
+        for token in (None, ""):
+            client = create_client(Config(url="http://epr", token=token))
+            assert "Authorization" not in client.headers
+
+    def test_returns_httpx2_client(self):
+        """The client is an httpx2.AsyncClient."""
+        import httpx2
+
+        assert isinstance(create_client(Config(url="http://epr")), httpx2.AsyncClient)

@@ -10,7 +10,7 @@ install: ;$(info $(M) installing mcp...) @ ## Installs epr-mcp-python into a vir
 
 .PHONY: lint
 lint: ; $(info $(M) running linter...) @ ## Run linter (requires ruff)
-	$Q ruff format -v src/epr_mcp/ tests/ && ruff check --fix -v src/epr_mcp/ tests/
+	$Q ruff format -v src/epr_mcp/ tests/ demos/ && ruff check --fix -v src/epr_mcp/ tests/ demos/
 
 .PHONY: tests
 tests: ; $(info $(M) running tests...) @ ## Run tests
@@ -22,16 +22,20 @@ release: ; $(info $(M) running tox...) @ ## Run tox
 
 .PHONY: wheel
 wheel: ; $(info $(M) creating sdist bdist_wheel...) @ ## Create an sdist bdist_wheel
-	$Q pip install --upgrade build && python -m build --sdist --wheel
+	$Q rm -rf build dist && pip install --upgrade build && python -m build --sdist --wheel
 
 .PHONY: docker-image
 docker-image: wheel; $(info $(M) building docker image...) @ ## Build the docker image
 	$Q docker build -t epr-mcp-python:latest .
 
+.PHONY: workshop-check
+workshop-check: ; $(info $(M) running workshop preflight...) @ ## Check the workshop setup (needs uv and a running EPR)
+	$Q cd docs/tutorials/code && uv run python check_setup.py
+
 .PHONY: clean
 clean: ; $(info $(M) cleaning...)	@ ## Cleanup everything
 	@rm -rvf bin tools vendor build dist
-	@rm -rvf *.egg-info *.egg .pytest_cache .ruff_cache .tox .coverage src/*.egg-info 
+	@rm -rvf *.egg-info *.egg .pytest_cache .ruff_cache .tox .coverage src/*.egg-info
 	@rm -rvf src/epr_mcp/__pycache__ tests/__pycache__ tests/unit/__pycache__
 
 .PHONY: help

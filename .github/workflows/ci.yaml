@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: © 2025 Brett Smith <xbcsmith@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+#
+# Runs the AGENTS.md quality gates: ruff, the tests with the 80% coverage floor
+# (which include the workshop checkpoints and the demos), and the markdown gates.
+---
+name: ci
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install
+        run: uv sync --python 3.12 --extra lint --extra test
+      - name: Lint
+        run: |
+          uv run ruff check src/ tests/ demos/ docs/tutorials/code
+          uv run ruff format --check src/ tests/ demos/ docs/tutorials/code
+      - name: Test
+        env:
+          EPR_MCP_FUNCTIONAL: "1"
+        run: uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+      - name: Doctests
+        run: uv run pytest --doctest-modules --import-mode=importlib src/epr_mcp demos
+
+  markdown:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Lint and format check
+        run: |
+          npm install --global markdownlint-cli prettier
+          files=$(git ls-files '*.md' | grep -v -e '^AGENTS.md$' -e '^PLAN.md$')
+          markdownlint --config .markdownlint.json $files
+          prettier --check --parser markdown --prose-wrap always $files
