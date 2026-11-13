@@ -13,7 +13,7 @@ you can run the suite right away and see it pass.  Add the remaining tests
 following the same pattern.
 """
 
-import json  # noqa: F401 -- you will use this in several tests
+import json
 
 import httpx2
 import pytest
