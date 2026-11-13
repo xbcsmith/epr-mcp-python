@@ -49,9 +49,9 @@ def test_http_transport_serves_health_and_tools():
     """Test http transport serves health and tools."""
     port = free_port()
     command = [
-        sys.executable, "-m", "epr_mcp.main", "start",
-        "--transport", "http", "--host", "127.0.0.1", "--port", str(port),
-        "--url", "http://127.0.0.1:9",
+        sys.executable, '-m', 'epr_mcp.main', 'start',
+        '--transport', 'http', '--host', '127.0.0.1', '--port', str(port),
+        '--url', 'http://127.0.0.1:9',
     ]  # fmt: skip
 
     async def list_tools():

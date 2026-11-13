@@ -27,8 +27,10 @@ Comprehensive context gathering for planning following <plan_research>:
 ## AI-Optimized Implementation Standards
 
 - Use explicit, unambiguous language with zero interpretation required
-- Structure all content as machine-parseable formats (tables, lists, structured data)
-- Include specific file paths, line numbers, and exact code references where applicable
+- Structure all content as machine-parseable formats (tables, lists, structured
+  data)
+- Include specific file paths, line numbers, and exact code references where
+  applicable
 - Define all variables, constants, and configuration values explicitly
 - Provide complete context within each task description
 - Include validation criteria that can be automatically verified
@@ -77,8 +79,9 @@ system rules:
 - ONLY write the plan, without unnecessary preamble or postamble
   </plan_style_guide>
 
-Write an phased approach implementation plan for implementing phases in your list
-of recommended implementation order. Write the plan to docs/explanation/{feature_name}_implementation_plan.md.
+Write an phased approach implementation plan for implementing phases in your
+list of recommended implementation order. Write the plan to
+docs/explanation/{feature_name}\_implementation_plan.md.
 
 ## Implementation Plan
 

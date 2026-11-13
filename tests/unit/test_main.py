@@ -40,12 +40,12 @@ class TestStart:
         """Test flags."""
         cfg = start(
             monkeypatch,
-            "--url", "http://epr:1",
-            "--token", "t",
-            "--transport", "stdio",
-            "--host", "127.0.0.1",
-            "--port", "9001",
-            "--debug",
+            '--url', 'http://epr:1',
+            '--token', 't',
+            '--transport', 'stdio',
+            '--host', '127.0.0.1',
+            '--port', '9001',
+            '--debug',
         )  # fmt: skip
         assert (cfg.url, cfg.token, cfg.transport, cfg.host, cfg.port, cfg.debug) == (
             "http://epr:1",

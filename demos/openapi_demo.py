@@ -75,9 +75,9 @@ def running_server(port: int, epr_url: str) -> Iterator[subprocess.Popen]:
         ``with running_server(free_port(), 'http://localhost:8042') as server: ...``
     """
     command = [
-        sys.executable, "-m", "epr_mcp.main", "start",
-        "--transport", "http", "--host", "127.0.0.1", "--port", str(port),
-        "--url", epr_url,
+        sys.executable, '-m', 'epr_mcp.main', 'start',
+        '--transport', 'http', '--host', '127.0.0.1', '--port', str(port),
+        '--url', epr_url,
     ]  # fmt: skip
     with subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as process:
         try:
